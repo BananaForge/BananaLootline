@@ -1,0 +1,47 @@
+name: Release
+
+# Ausloeser: ein Tag wie v0.18.0. Die Version im Tag muss mit
+# "## Version:" in BananaLootline.toc uebereinstimmen.
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lua 5.1 installieren
+        run: sudo apt-get update && sudo apt-get install -y lua5.1
+
+      - name: Tests ausfuehren
+        run: bash tools/run_tests.sh
+
+      - name: Version pruefen
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          TOC="$(grep '^## Version:' BananaLootline.toc | sed 's/## Version: *//' | tr -d '\r')"
+          if [ "$TAG" != "$TOC" ]; then
+            echo "Tag $TAG passt nicht zur .toc-Version $TOC"; exit 1
+          fi
+          echo "VERSION=$TAG" >> "$GITHUB_ENV"
+
+      # Der Ordner im ZIP MUSS "BananaLootline" heissen, sonst findet der
+      # Client weder das Addon noch das Logo. GitHubs eigenes
+      # "Download ZIP" liefert "BananaLootline-main" - deshalb dieses Paket.
+      - name: Paket bauen
+        run: |
+          mkdir -p dist/BananaLootline
+          cp BananaLootline.toc *.lua README.md LICENSE CHANGELOG.md dist/BananaLootline/
+          cp -r Data Images dist/BananaLootline/
+          cd dist && zip -r "BananaLootline-${VERSION}.zip" BananaLootline
+
+      - name: Release anlegen
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/BananaLootline-${{ env.VERSION }}.zip
+          generate_release_notes: true
