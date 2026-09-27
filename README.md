@@ -145,7 +145,7 @@ My test character is **level 15** and only covers Hunter. I have no real-world d
 
 ### How to report:
 
-The best bug reports include a **screenshot** showing what you saw and what you expected. Use the [OctoWoW Bug Tracker](https://octowow.st/bug-tracker) or open a GitHub Issue here.
+The best bug reports include a **screenshot** showing what you saw and what you expected. Use to open a GitHub Issue here.
 
 **Helpful debugging commands:**
 
