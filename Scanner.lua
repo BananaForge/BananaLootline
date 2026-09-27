@@ -176,18 +176,43 @@ local function LooksLikeEffect(line)
   return false
 end
 
--- Liefert die Werte und - als zweiten Rueckgabewert - die Zeilen, die
--- nach einem Effekt aussehen, aber keinen Wert hergaben. Aufrufer, die
--- nur die Werte brauchen, merken davon nichts.
+-- Nennt die Zeile eine Zugangsbedingung - Ruf, PvP-Rang, Beruf?
 --
--- Der zweite Rueckgabewert ist der Grund, warum ein Proc-Schmuckstueck
--- nicht faelschlich als "nichts wert" durchgeht: er sagt dem Vergleich,
--- dass hier etwas fehlt, das er nicht beziffern kann.
+-- Reine Stufenzeilen sind hier nicht mehr zu erwarten: die filtert
+-- ShouldSkip ueber SKIP_PREFIX bereits vorher heraus. Was als
+-- Bedingungszeile uebrig bleibt, ist etwas, das man sich erst verdienen
+-- muss - und damit nichts, das in einem Wegplan stehen sollte.
+local function IsRestriction(line)
+  local pre = BLL.RESTRICT_PREFIX
+  if pre then
+    for i = 1, table.getn(pre) do
+      if string.find(line, pre[i]) then return true end
+    end
+  end
+  local words = BLL.RESTRICT_WORDS
+  if words then
+    local low = string.lower(line)
+    for i = 1, table.getn(words) do
+      if string.find(low, words[i], 1, true) then return true end
+    end
+  end
+  return false
+end
+
+-- Liefert die Werte und - als zweiten Rueckgabewert - eine Tabelle mit
+-- dem, was der Tooltip sonst noch verraet. Aufrufer, die nur die Werte
+-- brauchen, merken davon nichts.
+--
+--   meta.unscored    Zeilen, die nach einem Effekt aussehen, aus denen
+--                    aber kein Wert kam (Procs). Verhindert, dass ein
+--                    starkes Teil als "nichts wert" durchgeht.
+--   meta.restricted  Die Zeile mit einer Zugangsbedingung, falls es eine
+--                    gibt. Ruf, PvP-Rang oder Beruf.
 function Scanner:GetStats(item)
   local id = (type(item) == "number") and item or self:GetItemID(item)
   if id and cache[id] then
     local c = cache[id]
-    return c.stats, c.unscored
+    return c.stats, c.meta
   end
 
   local lines = self:GetLines(item)
@@ -195,6 +220,7 @@ function Scanner:GetStats(item)
 
   local stats = {}
   local unscored = {}
+  local restricted = nil
   local patterns = BLL.PATTERNS
   local pcount = table.getn(patterns)
 
@@ -226,15 +252,26 @@ function Scanner:GetStats(item)
         end
       end
 
-      if not matched and LooksLikeEffect(line) then
-        table.insert(unscored, line)
+      if not matched then
+        -- Bedingung vor Effekt pruefen: "Benoetigt: Feldwebel" ist keine
+        -- unbezifferte Staerke, sondern eine geschlossene Tuer.
+        if not restricted and IsRestriction(line) then
+          restricted = line
+        elseif LooksLikeEffect(line) then
+          table.insert(unscored, line)
+        end
       end
     end
   end
 
-  if table.getn(unscored) == 0 then unscored = nil end
-  if id then cache[id] = { stats = stats, unscored = unscored } end
-  return stats, unscored
+  local meta = nil
+  if table.getn(unscored) > 0 or restricted then
+    meta = { unscored = (table.getn(unscored) > 0) and unscored or nil,
+             restricted = restricted }
+  end
+
+  if id then cache[id] = { stats = stats, meta = meta } end
+  return stats, meta
 end
 
 ------------------------------------------------------------------
@@ -299,7 +336,7 @@ function Scanner:DumpLines(item)
     DEFAULT_CHAT_FRAME:AddMessage("  |cff888888[" .. i .. "]|r " .. lines[i])
   end
 
-  local stats, unscored = self:GetStats(item)
+  local stats, meta = self:GetStats(item)
   local found = ""
   for k, v in pairs(stats or {}) do
     found = found .. k .. "=" .. v .. "  "
@@ -309,11 +346,16 @@ function Scanner:DumpLines(item)
   -- Zeilen, die nach einem Effekt aussehen, aus denen aber kein Wert
   -- kam. Wer eine harmlose Zeile hier auftauchen sieht, hat einen
   -- Fehlalarm gefunden - genau dafuer steht sie hier.
-  if unscored then
+  if meta and meta.unscored then
     BLL:Print("|cffff8800" .. BLL.L["DUMP_UNSCORED"] .. "|r")
-    for i = 1, table.getn(unscored) do
-      DEFAULT_CHAT_FRAME:AddMessage("  |cff888888-|r " .. unscored[i])
+    for i = 1, table.getn(meta.unscored) do
+      DEFAULT_CHAT_FRAME:AddMessage("  |cff888888-|r " .. meta.unscored[i])
     end
+  end
+
+  if meta and meta.restricted then
+    BLL:Print("|cffff0000" .. BLL.L["DUMP_LOCKED"] .. "|r")
+    DEFAULT_CHAT_FRAME:AddMessage("  |cff888888-|r " .. meta.restricted)
   end
 end
 

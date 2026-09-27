@@ -2,6 +2,13 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.19.2
+- Die Anforderungsstufe wird zwischen Itemcache und Itemdatenbank abgeglichen; bei Uneinigkeit gilt die höhere Angabe. „Outrider's Bow" erschien bei einem Stufe-15-Jäger mit dem Vermerk „ab 18", obwohl Tooltip und Import übereinstimmend Stufe 60 nennen — im gespeicherten Cache stand noch ein alter Wert, und Cache-Einträge werden nicht neu bewertet, solange ihre Version passt.
+- Gegenstände mit Ruf- oder Rangbedingung erscheinen nicht mehr in den Vorschlägen. Beim PvP-Quartiermeister in den Barrens steht ein Bogen ab Stufe 18 — zu holen ist er aber erst mit dem passenden Ehrenrang. Das Addon kannte nur die Stufenangabe und setzte solche Teile ganz nach oben. Die Bedingung wird jetzt beim Auslesen des Tooltips erkannt und dauerhaft vermerkt, weil der Client den Tooltip später wieder vergisst.
+- Neuer Befehl `/bll locked` blendet diese Teile wieder ein.
+- `/bll dump <id>` weist eine erkannte Zugangsbedingung getrennt aus.
+- Cache-Version 5: ältere Einträge kennen das neue Feld nicht und werden einmalig neu eingelesen.
+
 ## 0.19.1
 - Fehler aus 0.19.0 behoben: Ein Stufe-15-Jäger bekam Gegenstände mit Itemlevel 65 aus Tanaris vorgeschlagen, und die Kandidatenzahl stieg von rund 600 auf 4118. Ursache war der Importfilter — 2275 der 11349 Einträge führen keine Anforderungsstufe, und die Prüfung „Anforderungsstufe kleiner als Obergrenze" ist bei einer 0 immer wahr. Fehlt die Angabe, wird sie jetzt über das Itemlevel geschätzt; der Abstand beträgt im Datenbestand im Median 5 Stufen.
 - Der Rückblick nach unten wächst mit der Stufe statt fest bei 10 zu liegen: 3 Stufen auf Stufe 15, 10 auf Stufe 60. Der feste Wert war für das Stufenende gedacht und riss auf niedrigen Stufen das Suchband unnötig weit auf — Stufe 15 suchte 5 bis 21 ab statt 12 bis 21.

@@ -13,7 +13,7 @@ BananaLootline = BananaLootline or {}
 local BLL = BananaLootline
 local L = BLL.L
 
-BLL.VERSION = "0.19.1"
+BLL.VERSION = "0.19.2"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -353,6 +353,12 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
     BLL.Candidates.state = "idle"
     BLL:Print(L["CACHE_CLEARED"])
 
+  elseif command == "locked" then
+    BananaLootlineDB.showLocked = not BananaLootlineDB.showLocked
+    BLL:Print(string.format(L["LOCKED_STATE"],
+      BananaLootlineDB.showLocked and L["LOCKED_SHOWN"] or L["LOCKED_HIDDEN"]))
+    BLL:Print(L["REOPEN_WINDOW"])
+
   elseif command == "unused" then
     BananaLootlineDB.showUnreachable = not BananaLootlineDB.showUnreachable
     -- string.format, nicht Verkettung: das doppelte Prozentzeichen im
@@ -437,6 +443,7 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       { "/bll ahead <n>",       "HELP_AHEAD"      },
       { "/bll cat <zone> <cat>","HELP_CAT"        },
       { "/bll unused",          "HELP_UNUSED"     },
+      { "/bll locked",          "HELP_LOCKED"     },
       { "/bll weight",          "HELP_WEIGHT"     },
       { "/bll weight STR 3",    "HELP_WEIGHT_SET" },
       { "/bll weight reset",    "HELP_WEIGHT_RST" },

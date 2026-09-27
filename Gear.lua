@@ -105,7 +105,7 @@ function Gear:ScanEquipped()
 
     if link then
       local info  = BLL.Scanner:GetItemInfoSafe(link)
-      local stats, unscored = BLL.Scanner:GetStats(link)
+      local stats, meta = BLL.Scanner:GetStats(link)
 
       self.equipped[slot.key] = {
         id      = info and info.id,
@@ -117,7 +117,7 @@ function Gear:ScanEquipped()
         -- Effektzeilen ohne auslesbaren Wert. Der Slotvergleich braucht
         -- das, um nicht gegen eine Null zu rechnen, hinter der in
         -- Wahrheit ein Proc-Effekt steckt.
-        unscored = unscored,
+        unscored = meta and meta.unscored or nil,
       }
 
       for k, v in pairs(stats or {}) do

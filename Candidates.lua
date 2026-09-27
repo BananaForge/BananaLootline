@@ -39,8 +39,11 @@ local L = BLL.L
 -- aufgebaut, statt stillschweigend mit fehlenden Feldern weiterzulaufen.
 -- 3: Scanner liest RAP, Verteidigung und Schulschaden jetzt richtig.
 -- 4: Dauerhafte Aussortier-Markierungen werden neu bewertet.
+-- 5: Zugangsbedingungen (Ruf, PvP-Rang) werden mitgelesen. Aeltere
+--    Eintraege kennen das Feld nicht und wuerden solche Teile weiter
+--    vorschlagen, also muessen sie neu eingelesen werden.
 -- Aeltere Eintraege werden verworfen und neu eingelesen.
-Cand.CACHE_VERSION = 4
+Cand.CACHE_VERSION = 5
 
 Cand.pool     = nil     -- [itemID] = sourceLevel
 Cand.poolSize = 0
@@ -697,13 +700,19 @@ function Cand:StoreItem(itemID)
     return true
   end
 
+  local stats, meta = BLL.Scanner:GetStats(itemID)
+
   BananaLootlineDB.itemcache[itemID] = {
     n  = name,
     q  = quality,
     r  = reqLevel,
     e  = equipLoc,
     a  = ArmorKey(subtype),
-    st = BLL.Scanner:GetStats(itemID) or {},
+    st = stats or {},
+    -- Zugangsbedingung aus dem Tooltip, etwa ein Ehrenrang beim
+    -- PvP-Quartiermeister. Wird mitgespeichert, weil der Clientcache
+    -- den Tooltip spaeter wieder vergisst - der Befund hier nicht.
+    lock = meta and meta.restricted or nil,
   }
   return true
 end
@@ -815,8 +824,39 @@ function Cand:PlanAhead()
   return n
 end
 
+-- Anforderungsstufe eines Kandidaten, aus beiden Quellen abgeglichen.
+--
+-- Der Itemcache ueberlebt Reloads und kann aus einer Sitzung stammen, in
+-- der die Itemdatenbank noch andere Werte fuehrte. Genau so stand
+-- "Outrider's Bow" mit "ab 18" bei einem Stufe-15-Jaeger, obwohl Tooltip
+-- und Import uebereinstimmend Stufe 60 nennen.
+--
+-- Bei Uneinigkeit gilt die hoehere Angabe. Ein Teil zu wenig
+-- vorzuschlagen kostet den Spieler nichts; ihn quer ueber den Kontinent
+-- zu einem Gegenstand zu schicken, den er nicht anlegen kann, schon.
+function Cand:RequiredLevel(entry, itemID)
+  local r = entry.r or 0
+  if itemID and BLL.ItemDB and BLL.ItemDB.loaded then
+    local db = BLL.ItemDB:Get(itemID)
+    if db and db.reqlevel and db.reqlevel > r then
+      r = db.reqlevel
+      entry.r = r     -- gleich im Cache richtigstellen
+    end
+  end
+  return r
+end
+
 function Cand:IsUsable(entry, class, level, allowedArmor, itemID)
   if entry.skip then return false end
+
+  -- Ruf- oder Rangbedingung: das Teil steht zwar bei einem Haendler,
+  -- ist aber erst nach entsprechender Vorleistung zu haben. In einem
+  -- Wegplan hat es nichts verloren - ein Stufe-15-Charakter kam an den
+  -- Bogen des PvP-Quartiermeisters nie heran, er stand trotzdem ganz
+  -- oben. Mit /bll locked wieder einblendbar.
+  if entry.lock and not (BananaLootlineDB and BananaLootlineDB.showLocked) then
+    return false
+  end
 
   -- Aeltere Cache-Eintraege stammen aus einer Fassung ohne Waffenpruefung
   -- und fuehren keine Subklasse. Da unbekannte Subklassen durchgelassen
@@ -830,7 +870,10 @@ function Cand:IsUsable(entry, class, level, allowedArmor, itemID)
       if entry.cm == nil then entry.cm = db.classmask end
     end
   end
-  if entry.r and entry.r > (level + self:PlanAhead()) then return false end
+
+  if self:RequiredLevel(entry, itemID) > (level + self:PlanAhead()) then
+    return false
+  end
 
   -- Ruestungsart pruefen. Schmuck, Ringe, Halsketten und Waffen haben
   -- keinen Ruestungsschluessel und werden durchgelassen.
@@ -934,7 +977,10 @@ function Cand:GetUpgrades(slotKey, maxResults)
 
       -- Waffe in der Schildhand verlangt Beidhaendigkeit. Schilde und
       -- Nebenhandgegenstaende sind davon nicht betroffen.
-      local reqEff = entry.r
+      -- Abgeglichene Stufe, nicht die rohe aus dem Cache: sonst zeigt
+      -- die Liste "ab 18" an einem Teil, das Stufe 60 verlangt.
+      local reqEff = self:RequiredLevel(entry, itemID)
+      if reqEff == 0 then reqEff = nil end
       local skills = self:WeaponSkills()
       local dualWieldNeeded, learnSkill
 

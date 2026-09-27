@@ -164,6 +164,12 @@ local L_enUS = {
 
   -- ---- Herkunft eines Kandidaten ----
   ["NO_LOCATION_YET"] = "no known location",
+  ["LOCKED_ITEM"]     = "not freely available",
+  ["LOCKED_STATE"]    = "Items with a reputation or rank requirement: %s",
+  ["LOCKED_SHOWN"]    = "are shown",
+  ["LOCKED_HIDDEN"]   = "are hidden",
+  ["DUMP_LOCKED"]     = "Access requirement:",
+  ["HELP_LOCKED"]     = "show/hide items needing reputation or rank",
   ["UNSCORED_EQUIPPED"] = "effect not scored",
   ["UNSCORED_HINT"]   = "The equipped item has an effect the addon cannot put a number on. Close suggestions are held back - they would be guesses.",
   ["UNSCORED_SHORT"]  = "comparison incomplete",
@@ -301,6 +307,12 @@ local L_deDE = {
 
   -- ---- Herkunft eines Kandidaten ----
   ["NO_LOCATION_YET"] = "kein bekannter Fundort",
+  ["LOCKED_ITEM"]     = "nicht frei erhaeltlich",
+  ["LOCKED_STATE"]    = "Gegenstaende mit Ruf- oder Rangbedingung: %s",
+  ["LOCKED_SHOWN"]    = "werden angezeigt",
+  ["LOCKED_HIDDEN"]   = "werden ausgeblendet",
+  ["DUMP_LOCKED"]     = "Zugangsbedingung:",
+  ["HELP_LOCKED"]     = "Teile mit Ruf- oder Rangbedingung ein-/ausblenden",
   ["UNSCORED_EQUIPPED"] = "Effekt nicht bewertet",
   ["UNSCORED_HINT"]   = "Das angelegte Teil hat einen Effekt, den das Addon nicht in Punkte fassen kann. Knappe Vorschlaege bleiben deshalb aussen vor - sie waeren geraten.",
   ["UNSCORED_SHORT"]  = "Vergleich unvollstaendig",
@@ -478,6 +490,34 @@ BLL.PATTERNS = (BLL.clientLocale == "deDE") and P_deDE or P_enUS
 -- Bewusst kurz: jedes Muster, das zu breit trifft, unterdrueckt echte
 -- Vorschlaege. Verglichen wird kleingeschrieben.
 ------------------------------------------------------------------
+
+
+------------------------------------------------------------------
+-- Zugangsbedingungen: Ruf und PvP-Rang
+--
+-- Ein Bogen beim PvP-Quartiermeister kann Stufe 18 verlangen und
+-- zusaetzlich einen Ehrenrang. Die Stufe kennt das Addon, den Rang
+-- nicht - solche Teile standen deshalb ganz oben in der Lootline,
+-- obwohl ein frischer Charakter nie an sie herankommt.
+--
+-- Erkannt wird die Bedingungszeile des Tooltips. Reine Stufenzeilen
+-- ("Requires Level 18") filtert SKIP_PREFIX schon vorher heraus, hier
+-- kommen also nur die anderen an: Ruf, Rang, Beruf.
+--
+-- Das Muster umgeht den Umlaut in "Benoetigt" absichtlich mit ".-",
+-- damit es unabhaengig von der Zeichenkodierung des Clients greift.
+------------------------------------------------------------------
+
+BLL.RESTRICT_PREFIX = (BLL.clientLocale == "deDE")
+  and { "^Ben.-tigt", "^Erfordert" }
+  or  { "^Requires" }
+
+-- Zusaetzliches Netz fuer Zeilen, die nicht mit dem Bedingungswort
+-- beginnen, aber eindeutig eine Ruf- oder Rangstufe nennen.
+BLL.RESTRICT_WORDS = (BLL.clientLocale == "deDE")
+  and { "wohlwollend", "respektvoll", "ehrf", "freundlich", "revered",
+        "ehrenrang", "rang " }
+  or  { "friendly", "honored", "revered", "exalted", "rank " }
 
 BLL.EFFECT_HINTS = (BLL.clientLocale == "deDE")
   and { "chance", "benutzen:", "wenn getroffen", "bei treffer" }

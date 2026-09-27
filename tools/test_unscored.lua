@@ -56,18 +56,19 @@ local ok = true
 local function check(c, m) if not c then ok = false; print("FEHLER: " .. m) end end
 
 local nextID = 1
+
+-- GetStats liefert die Werte und eine Metatabelle. Die Tests hier
+-- interessiert daraus nur .unscored, deshalb wird sie gleich ausgepackt.
 local function scan(lines)
   currentLines = lines
   Scanner:ClearCache()
   nextID = nextID + 1
-  return Scanner:GetStats(nextID)
+  local stats, meta = Scanner:GetStats(nextID)
+  return stats, meta and meta.unscored or nil
 end
 
 local function scanUnscored(lines)
-  currentLines = lines
-  Scanner:ClearCache()
-  nextID = nextID + 1
-  local _, unscored = Scanner:GetStats(nextID)
+  local _, unscored = scan(lines)
   return unscored
 end
 
