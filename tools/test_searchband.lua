@@ -41,17 +41,19 @@ lo, hi = Cand:Band()
 check(lo == 50 and hi == 63,
   "Stufe 60, ahead 60 -> Band 50-63, war " .. lo .. "-" .. hi)
 
--- Auf niedriger Stufe wirkt ahead nach oben tatsaechlich
+-- Auf niedriger Stufe wirkt ahead nach oben tatsaechlich. Der Rueckblick
+-- ist dort bewusst kurz: drei Stufen bei Stufe 20, nicht zehn - siehe
+-- test_poolbounds.lua.
 BLL.player = { class = "ROGUE", level = 20 }
 BananaLootlineDB.planAhead = 10
 lo, hi = Cand:Band()
-check(lo == 10 and hi == 30,
-  "Stufe 20, ahead 10 -> Band 10-30, war " .. lo .. "-" .. hi)
+check(lo == 17 and hi == 30,
+  "Stufe 20, ahead 10 -> Band 17-30, war " .. lo .. "-" .. hi)
 
 -- Ein Argument schlaegt die gespeicherte Einstellung fuer diesen Lauf
 lo, hi = Cand:Band(2)
-check(lo == 10 and hi == 22,
-  "Stufe 20, Argument 2 -> Band 10-22, war " .. lo .. "-" .. hi)
+check(lo == 17 and hi == 22,
+  "Stufe 20, Argument 2 -> Band 17-22, war " .. lo .. "-" .. hi)
 check(BananaLootlineDB.planAhead == 10,
   "Argument aendert die gespeicherte Vorausplanung nicht")
 

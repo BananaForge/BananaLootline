@@ -47,13 +47,19 @@ Dungeon, Raid, World Boss, Battleground, Vendor, Quest, World — derived from i
 Quests are placed by their quest giver, not dropped into a catch-all group. Opposite-faction quests are filtered out using pfQuest's race mask.
 
 ### 🔭 Forward Planning
-Items above your level appear with a note instead of disappearing. `/bll ahead <n>` sets how many levels ahead to look.
+`/bll ahead <n>` sets how many levels ahead the search reaches. Items above your level appear with a note instead of disappearing.
+
+### 🌐 Full Bilingual Interface
+The DE/EN switch in the top right changes every text the addon produces — window labels, chat messages, help and progress output. Your choice is saved per account. Tooltip parsing always follows the game client's language, so switching the display never breaks stat detection.
 
 ### 🏆 Set Bonuses
 A weaker individual piece can rank above a stronger one if it completes a set bonus. The score display shows where the advantage comes from.
 
 ### ⚡ Use Effects
 Active effects are scored proportionally: 100 Attack Power for 20 seconds on a 120-second cooldown counts as ~17, not 100.
+
+### 🎲 Proc Effects Are Not Ignored
+Stats are read from the tooltip, so a proc effect written as a sentence scores zero points. Without a guard, Hand of Justice would lose to any piece with four Stamina. When your equipped item has an effect the addon cannot put a number on, a candidate now has to lead clearly instead of narrowly, and such suggestions are marked as an incomplete comparison. Items with no combat effect at all are unaffected — anything with a single stat still beats them.
 
 ### 🔗 pfQuest Integration
 Drop sources, vendors, quest givers, and chest locations are pulled live from pfQuest's database at runtime. No duplicate data, every pfQuest-octo update takes effect immediately.
@@ -70,7 +76,7 @@ Sources appear on every item tooltip in the game, not only inside the addon wind
    → [pfQuest-octo by roby-brok](https://github.com/roby-brok/pfQuest-octo)
 3. Log in and type `/bll`.
 
-> **Note:** The addon was renamed from OctoLootline to BananaLootline as part of the BananaForge collection. The TOC file will be updated in an upcoming release.
+Settings from an earlier OctoLootline install are carried over automatically.
 
 ---
 
@@ -79,17 +85,18 @@ Sources appear on every item tooltip in the game, not only inside the addon wind
 | Command | Effect |
 |---|---|
 | `/bll` | Open / close the window |
-| `/bll up [n]` | Search for upgrades, `n` = level range (default 6) |
+| `/bll lang de\|en\|auto` | Display language, including all status messages |
+| `/bll up [n]` | Search for upgrades, `n` overrides the span from `/bll ahead` for this run |
 | `/bll spec` | Show detected spec and talent points per tree |
-| `/bll ahead <n>` | Levels ahead to plan for (default 6, 0 = equippable only) |
-| `/bll cat <Zone> <Category>` | Reassign a location (dungeon, raid, worldboss …) |
+| `/bll ahead <n>` | Levels the search reaches ahead (default 6, 0 = equippable only) |
+| `/bll cat <Zone> <Category>` | Reassign a location (dungeon, raid, worldboss, vendor, object …) |
 | `/bll unused` | Toggle display of unreachable sources |
 | `/bll weight` | Show or set stat weights |
 | `/bll stop` | Cancel a running scan |
 | `/bll rate <n>` | Scan rate in items/second (default 8) |
 | `/bll forget` | Clear the item cache |
 | `/bll scan` | Rescan equipment and print to chat |
-| `/bll dump <itemID>` | Print raw tooltip lines and what was parsed |
+| `/bll dump <itemID>` | Print raw tooltip lines, what was parsed, and which effect lines could not be scored |
 | `/bll src <itemID>` | Print sources of an item to chat |
 | `/bll info` | Status line (pfQuest? ItemDB? Locale?) |
 | `/bll debug` | Toggle debug output |

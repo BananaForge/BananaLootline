@@ -2,6 +2,11 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.19.1
+- Fehler aus 0.19.0 behoben: Ein Stufe-15-Jäger bekam Gegenstände mit Itemlevel 65 aus Tanaris vorgeschlagen, und die Kandidatenzahl stieg von rund 600 auf 4118. Ursache war der Importfilter — 2275 der 11349 Einträge führen keine Anforderungsstufe, und die Prüfung „Anforderungsstufe kleiner als Obergrenze" ist bei einer 0 immer wahr. Fehlt die Angabe, wird sie jetzt über das Itemlevel geschätzt; der Abstand beträgt im Datenbestand im Median 5 Stufen.
+- Der Rückblick nach unten wächst mit der Stufe statt fest bei 10 zu liegen: 3 Stufen auf Stufe 15, 10 auf Stufe 60. Der feste Wert war für das Stufenende gedacht und riss auf niedrigen Stufen das Suchband unnötig weit auf — Stufe 15 suchte 5 bis 21 ab statt 12 bis 21.
+- Neuer Regressionstest `test_poolbounds.lua` mit genau den beiden Gegenständen aus dem Fehlerbericht.
+
 ## 0.19.0
 - Effekte ohne Zahl werden beim Vergleich berücksichtigt. Der Scanner liest Werte aus dem Tooltip; ein Proc-Effekt steht dort als Satz und zählte deshalb null Punkte. Die Hand der Gerechtigkeit verlor damit gegen jedes beliebige Teil mit vier Ausdauer. Trägt der Spieler ein Teil mit unbeziffertem Effekt, muss ein Kandidat jetzt deutlich vorne liegen statt knapp; solche Vorschläge werden als unvollständiger Vergleich gekennzeichnet. Das angelegte Teil bekommt den Vermerk „Effekt nicht bewertet".
 - Items ohne Kampfeffekt sind davon nicht betroffen. Die Anstecknadel der Argentumdämmerung bleibt bei null Punkten, jedes Teil mit einem einzigen Wert schlägt sie weiterhin.

@@ -13,7 +13,7 @@ BananaLootline = BananaLootline or {}
 local BLL = BananaLootline
 local L = BLL.L
 
-BLL.VERSION = "0.19.0"
+BLL.VERSION = "0.19.1"
 
 ------------------------------------------------------------------
 -- Ausgabe

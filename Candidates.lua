@@ -321,12 +321,29 @@ end
 
 local CHUNK = 1500        -- Eintraege pro Frame
 
--- So weit wird nach UNTEN gesucht. Fest, nicht an die Vorausplanung
--- gekoppelt: "ahead" heisst vorausplanen und meint nach oben. Frueher
--- war das Band level-span/2 bis level+span, wodurch ein Stufe-60-
--- Charakter mit dem Standardwert 6 nur 57 bis 63 absuchte. Genau in
--- diesem schmalen Streifen liegt am Stufenende fast nichts.
-local LOOKBACK = 10
+-- So weit wird nach UNTEN gesucht, abhaengig von der eigenen Stufe.
+--
+-- Nicht an die Vorausplanung gekoppelt: "ahead" heisst vorausplanen und
+-- meint nach oben. Frueher war das Band level-span/2 bis level+span,
+-- wodurch ein Stufe-60-Charakter mit dem Standardwert 6 nur 57 bis 63
+-- absuchte - ein Streifen, in dem am Stufenende fast nichts liegt.
+--
+-- Ein fester Wert taugt dafuer aber nicht. Mit 10 Stufen suchte ein
+-- Stufe-15-Jaeger ploetzlich ab Stufe 5 und bekam Kram vorgeschlagen,
+-- den er laengst hinter sich hatte. Auf niedrigen Stufen wechselt die
+-- Ausruestung schnell, am Stufenende kaum noch - also waechst der
+-- Rueckblick mit der Stufe: 3 Stufen bei Stufe 15, 10 bei Stufe 60.
+local function Lookback(level)
+  local n = math.floor((level or 60) / 6)
+  if n < 3  then n = 3  end
+  if n > 10 then n = 10 end
+  return n
+end
+
+-- Typischer Abstand zwischen Itemlevel und Anforderungsstufe. Im
+-- Datenbestand liegt der Median bei genau 5. Gebraucht wird er fuer die
+-- 2275 Eintraege, die gar keine Anforderungsstufe fuehren.
+local ILVL_TO_REQ = 5
 
 -- Hoechste Quellenstufe in Vanilla. Darueber gibt es keine Mobs, ein
 -- groesseres "ahead" kann das Band nach oben also nicht mehr weiten.
@@ -435,9 +452,9 @@ function Cand:ImportChunk()
   -- Obergrenze ist die Anforderungsstufe: was man nicht anlegen kann und
   -- auch nicht bald anlegen kann, gehoert nicht auf die Liste.
   local maxReq  = level + self:PlanAhead()
-  -- Untergrenze ueber das Itemlevel, weil die Anforderungsstufe bei
-  -- vielen Teilen 0 ist. Deutlich veraltete Stuecke bleiben damit draussen.
-  local minIlvl = math.max(1, level - LOOKBACK)
+  -- Untergrenze ueber das Itemlevel. Deutlich veraltete Stuecke bleiben
+  -- damit draussen.
+  local minIlvl = math.max(1, level - Lookback(level))
 
   local pfItems = BLL.Sources.items
   local processed = 0
@@ -447,11 +464,24 @@ function Cand:ImportChunk()
     if type(e) == "table" and not self.pool[key] then
       local req  = e.reqlevel or 0
       local ilvl = e.ilvl or 0
-      if req <= maxReq and ilvl >= minIlvl and (e.quality or 0) >= 1
+
+      -- 2275 der 11349 Eintraege fuehren keine Anforderungsstufe. Ohne
+      -- Ersatzwert rutscht jeder davon durch, weil 0 immer kleiner ist
+      -- als jede Obergrenze - so landete "Flintlocke's Hand Cannon"
+      -- (Itemlevel 65, keine Stufenangabe) im Pool eines Stufe-15-
+      -- Jaegers und verdraengte mit absurden Zuwaechsen alles, was
+      -- wirklich erreichbar war. Geschaetzt wird ueber das Itemlevel.
+      local effReq = req
+      if effReq <= 0 then effReq = math.max(0, ilvl - ILVL_TO_REQ) end
+
+      if effReq <= maxReq and ilvl >= minIlvl and (e.quality or 0) >= 1
          and BLL.ItemDB:MaskAllows(e.classmask, class) then
         -- Als Poolstufe die Anforderungsstufe nehmen, ersatzweise das
         -- Itemlevel. Sie dient nur der Anzeige, gefiltert wurde schon.
-        self.pool[key] = (req > 0) and req or ilvl
+        -- Als Poolstufe die geschaetzte Anforderungsstufe, nicht das rohe
+        -- Itemlevel: sonst stuende bei einem Teil ohne Stufenangabe die
+        -- 65 in der Anzeige, obwohl es ab 60 tragbar ist.
+        self.pool[key] = effReq
         self.poolSize  = self.poolSize + 1
         -- Nur wenn pfQuest das Item ueberhaupt nicht fuehrt, fehlt der
         -- Fundort wirklich. Kennt pfQuest es und lag nur die Stufe
@@ -1294,7 +1324,7 @@ end
 function Cand:Band(span)
   span = span or self:PlanAhead()
   local level = (BLL.player and BLL.player.level) or 60
-  local minLvl = math.max(1, level - LOOKBACK)
+  local minLvl = math.max(1, level - Lookback(level))
   local maxLvl = math.min(MAX_SOURCE_LEVEL, level + span)
   if maxLvl < minLvl then maxLvl = minLvl end
   return minLvl, maxLvl
