@@ -1,6 +1,6 @@
 # BananaLootline – Entwicklung
 
-Stand: Version 0.18.0. Dieses Dokument reicht, um am Addon weiterzuarbeiten.
+Stand: Version 0.19.0. Dieses Dokument reicht, um am Addon weiterzuarbeiten.
 
 ---
 

@@ -164,14 +164,37 @@ end
 -- Stats parsen
 ------------------------------------------------------------------
 
+-- Deutet die Zeile auf einen Effekt hin, den kein Wertmuster erfasst?
+-- Wird nur fuer Zeilen gefragt, auf die vorher nichts gepasst hat.
+local function LooksLikeEffect(line)
+  local hints = BLL.EFFECT_HINTS
+  if not hints then return false end
+  local low = string.lower(line)
+  for i = 1, table.getn(hints) do
+    if string.find(low, hints[i], 1, true) then return true end
+  end
+  return false
+end
+
+-- Liefert die Werte und - als zweiten Rueckgabewert - die Zeilen, die
+-- nach einem Effekt aussehen, aber keinen Wert hergaben. Aufrufer, die
+-- nur die Werte brauchen, merken davon nichts.
+--
+-- Der zweite Rueckgabewert ist der Grund, warum ein Proc-Schmuckstueck
+-- nicht faelschlich als "nichts wert" durchgeht: er sagt dem Vergleich,
+-- dass hier etwas fehlt, das er nicht beziffern kann.
 function Scanner:GetStats(item)
   local id = (type(item) == "number") and item or self:GetItemID(item)
-  if id and cache[id] then return cache[id] end
+  if id and cache[id] then
+    local c = cache[id]
+    return c.stats, c.unscored
+  end
 
   local lines = self:GetLines(item)
   if not lines or table.getn(lines) == 0 then return nil end
 
   local stats = {}
+  local unscored = {}
   local patterns = BLL.PATTERNS
   local pcount = table.getn(patterns)
 
@@ -179,11 +202,14 @@ function Scanner:GetStats(item)
     local line = lines[i]
 
     if not ShouldSkip(line) then
+      local matched = false
+
       -- Schadensbereich zuerst (zwei Captures)
       local _, _, dmin, dmax = string.find(line, BLL.DMG_PATTERN)
       if dmin then
         stats["WEAPON_MIN"] = tonumber(dmin)
         stats["WEAPON_MAX"] = tonumber(dmax)
+        matched = true
       else
         for p = 1, pcount do
           local entry = patterns[p]
@@ -194,15 +220,21 @@ function Scanner:GetStats(item)
             if num then
               stats[key] = (stats[key] or 0) + (num * sign)
             end
+            matched = true
             break   -- eine Zeile liefert maximal einen Stat
           end
         end
       end
+
+      if not matched and LooksLikeEffect(line) then
+        table.insert(unscored, line)
+      end
     end
   end
 
-  if id then cache[id] = stats end
-  return stats
+  if table.getn(unscored) == 0 then unscored = nil end
+  if id then cache[id] = { stats = stats, unscored = unscored } end
+  return stats, unscored
 end
 
 ------------------------------------------------------------------
@@ -267,12 +299,22 @@ function Scanner:DumpLines(item)
     DEFAULT_CHAT_FRAME:AddMessage("  |cff888888[" .. i .. "]|r " .. lines[i])
   end
 
-  local stats = self:GetStats(item)
+  local stats, unscored = self:GetStats(item)
   local found = ""
   for k, v in pairs(stats or {}) do
     found = found .. k .. "=" .. v .. "  "
   end
   BLL:Print("Erkannt: " .. (found ~= "" and found or "|cffff0000nichts|r"))
+
+  -- Zeilen, die nach einem Effekt aussehen, aus denen aber kein Wert
+  -- kam. Wer eine harmlose Zeile hier auftauchen sieht, hat einen
+  -- Fehlalarm gefunden - genau dafuer steht sie hier.
+  if unscored then
+    BLL:Print("|cffff8800" .. BLL.L["DUMP_UNSCORED"] .. "|r")
+    for i = 1, table.getn(unscored) do
+      DEFAULT_CHAT_FRAME:AddMessage("  |cff888888-|r " .. unscored[i])
+    end
+  end
 end
 
 ------------------------------------------------------------------

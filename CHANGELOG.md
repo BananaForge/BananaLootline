@@ -2,6 +2,20 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.19.0
+- Effekte ohne Zahl werden beim Vergleich berücksichtigt. Der Scanner liest Werte aus dem Tooltip; ein Proc-Effekt steht dort als Satz und zählte deshalb null Punkte. Die Hand der Gerechtigkeit verlor damit gegen jedes beliebige Teil mit vier Ausdauer. Trägt der Spieler ein Teil mit unbeziffertem Effekt, muss ein Kandidat jetzt deutlich vorne liegen statt knapp; solche Vorschläge werden als unvollständiger Vergleich gekennzeichnet. Das angelegte Teil bekommt den Vermerk „Effekt nicht bewertet".
+- Items ohne Kampfeffekt sind davon nicht betroffen. Die Anstecknadel der Argentumdämmerung bleibt bei null Punkten, jedes Teil mit einem einzigen Wert schlägt sie weiterhin.
+- `/bll dump <id>` listet die Zeilen auf, die nach einem Effekt aussehen, aus denen aber kein Wert kam — damit lassen sich Fehlalarme der Erkennung melden.
+- Statusmeldungen folgen jetzt dem Schalter DE/EN. Rund 60 Texte in Chat, Hilfe und Fortschrittsanzeige standen fest im Code und blieben deutsch, auch wenn die Anzeigesprache auf Englisch stand. Die Tooltip-Auswertung folgt weiterhin der Clientsprache.
+- `/bll cat` versteht die Kategorien jetzt auch auf Englisch: `world`, `worldboss`, `battleground`, `vendor`, `object`.
+- `/bll ahead` steuert endlich die Suche. Bisher wirkte die Einstellung nur als Filter auf bereits gefundene Items; `/bll up` suchte immer mit der festen Spanne 6.
+- Das Suchband reicht 10 Stufen nach unten statt der halben Vorausplanung. Ein Charakter auf Stufe 60 suchte damit nur 57 bis 63 ab — ein Streifen, in dem am Stufenende fast nichts liegt. Jetzt sind es 50 bis 63.
+- Die Quellenstufe eines Items ist nicht mehr das Minimum über alle Quellen, sondern die niedrigste Quelle innerhalb des Suchbands. Ein Raidteil, das irgendwo auch ein Stufe-40-Mob trägt, fiel vorher aus jedem Band eines Stufe-60-Charakters heraus.
+- Der Kandidatenpool zieht zusätzlich Items aus der importierten ItemDB. pfQuest liefert nur Items mit brauchbarer Stufenangabe an der Quelle; am Stufenende blieb davon zu wenig übrig. Items aus dem Import haben keinen Fundort, werden als solche gekennzeichnet und hinter den verorteten einsortiert. Im Wegplan erscheinen sie nicht — dort gehört nur hin, wohin man auch gehen kann.
+- Fehler behoben: `Progress()` war zweimal definiert. Die zweite Fassung überschrieb die erste und kannte nur einen Zustand, den es nicht gibt — während Abfrage und Auswertung zeigte das Fenster deshalb gar keinen Fortschritt.
+- Fehler behoben: Die Meldung zu `/bll unused` gab `0%%` statt `0%` aus.
+- Vier neue Testdateien: `test_messages.lua` prüft Schlüsselgleichheit, Formatplatzhalter und dass keine Meldung mehr fest verdrahtet ist, `test_searchband.lua` deckt Stufenband, Quellenstufe und Poolaufbau ab, `test_trinket.lua` den Vergleich bei Schmuckstücken ohne Werte, `test_unscored.lua` die Effekterkennung samt Gegenproben gegen Fehlalarme.
+
 ## 0.18.0
 - Waffenfertigkeiten werden aus dem Client gelesen. Gelernte Waffen gelten sofort, lernbare erscheinen mit Hinweis „Waffenmeister" (ab Stufe 10, Stangenwaffen ab 20).
 - Beidhändigkeit gilt, sobald der Client sie meldet. Vorher: Schurke ab 10, Krieger und Jäger ab 20.

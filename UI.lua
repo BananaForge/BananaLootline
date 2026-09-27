@@ -1911,11 +1911,20 @@ function UI:ShowDetail(slotKey)
         table.insert(parts, "|cff00ff00" .. sign .. shown .. "|r |cffaaaaaa" .. StatLabel(k) .. "|r")
       end
     end
+    local statLine
     if table.getn(parts) == 0 then
-      cur.stats:SetText("|cff888888" .. (BLL.locale == "deDE" and "keine Werte" or "no stats") .. "|r")
+      statLine = "|cff888888"
+        .. (BLL.locale == "deDE" and "keine Werte" or "no stats") .. "|r"
     else
-      cur.stats:SetText((JoinFit(measure, parts, 308, 12, 2)))
+      statLine = (JoinFit(measure, parts, 308, 12, 2))
     end
+    -- Ein Teil kann stark sein, ohne dass ein Wert im Tooltip steht.
+    -- Genau dann gehoert der Vermerk hierhin, damit "keine Werte" nicht
+    -- als "wertlos" gelesen wird.
+    if data.unscored then
+      statLine = statLine .. "  |cffff8800(" .. BLL.L["UNSCORED_EQUIPPED"] .. ")|r"
+    end
+    cur.stats:SetText(statLine)
   else
     cur.icon:SetTexture(SlotBackdrop(slotKey))
     cur.border:Hide()
@@ -1950,9 +1959,16 @@ function UI:ShowDetail(slotKey)
   local ups = BLL.Candidates:GetUpgrades(slotKey, table.getn(pane.rows))
   local n = table.getn(ups or {})
   if n == 0 then
-    sv.status:SetText("|cff888888"
+    local nothing = "|cff888888"
       .. (BLL.locale == "deDE" and "Nichts Besseres in deinem Stufenbereich."
-                               or  "Nothing better in your level range.") .. "|r")
+                               or  "Nothing better in your level range.") .. "|r"
+    -- Liegt es am unbezifferbaren Effekt des angelegten Teils, dann sagen
+    -- wir das. "Nichts Besseres" allein waere hier irrefuehrend: es gab
+    -- Kandidaten, sie waren nur nicht deutlich genug vorne.
+    if data and data.unscored then
+      nothing = nothing .. "\n|cffff8800" .. BLL.L["UNSCORED_HINT"] .. "|r"
+    end
+    sv.status:SetText(nothing)
     return
   end
   sv.secUp.right:SetText("|cff888888" .. n
@@ -2022,6 +2038,11 @@ function UI:ShowDetail(slotKey)
     if u.learnSkill then
       lock = lock .. "|cffff8800" .. (de and "Waffenmeister" or "weapon master") .. "|r  "
     end
+    -- Verglichen wurde gegen ein Teil mit unbeziffertem Effekt. Der
+    -- Vorsprung ist echt, aber nicht der ganze Vergleich.
+    if u.incomplete then
+      lock = lock .. "|cffff8800" .. BLL.L["UNSCORED_SHORT"] .. "|r  "
+    end
     if u.sources and table.getn(u.sources) > 0 then
       local src = u.sources[1]
       local pre, post = lock .. "|cffcccccc", "|r"
@@ -2036,7 +2057,10 @@ function UI:ShowDetail(slotKey)
       if src.zone then post = post .. "  |cff888888" .. src.zone .. "|r" end
       FitText(measure, row.srcText, pre, src.name or "?", post, 312, 12)
     else
-      row.srcText:SetText(lock .. "|cff666666" .. BLL.L["NO_SOURCE"] .. "|r")
+      -- Zwei verschiedene Faelle: ein Item aus dem Import hat noch nie
+      -- einen Fundort gehabt, bei einem pfQuest-Item fehlen die Daten.
+      row.srcText:SetText(lock .. "|cff666666"
+        .. (u.fromImport and BLL.L["NO_LOCATION_YET"] or BLL.L["NO_SOURCE"]) .. "|r")
     end
 
     local _, _, _, _, _, _, _, _, tex = GetItemInfo(u.id)

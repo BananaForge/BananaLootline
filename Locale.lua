@@ -72,6 +72,102 @@ local L_enUS = {
   ["NEED_MAILBOX"]    = "You need to stand at a",
   ["MAILBOX"]         = "mailbox",
   ["NEED_MAILBOX_2"]  = "for that. You can also select the name and copy it with Ctrl+C.",
+
+  -- ---- Statusmeldungen: Start und Datenbanken ----
+  ["MIGRATED"]        = "Settings carried over from OctoLootline.",
+  ["ITEMDB_BROKEN"]   = "ItemDB.lua is missing or was overwritten. The import target is Data/ItemData.lua, not ItemDB.lua!",
+  ["ITEMDB_LOADED"]   = "ItemDB: %d items loaded",
+  ["SETDB_LOADED"]    = "SetDB: %d sets loaded",
+  ["ITEMDB_NONE"]     = "not imported",
+  ["YES"]             = "yes",
+  ["NO"]              = "no",
+  ["ON"]              = "on",
+  ["OFF"]             = "off",
+
+  -- ---- Kandidatensuche ----
+  ["CAND_NO_PFQUEST"] = "pfQuest missing - no suggestions without the database.",
+  ["CAND_SEARCHING"]  = "Searching candidates for level %d-%d ...",
+  ["CAND_FOUND"]      = "%d candidates found. Fetching item data ...",
+  ["CAND_FOUND_MIX"]  = "%d candidates found (%d with location, %d from the import). Fetching item data ...",
+  ["CAND_IMPORT"]     = "Import evaluated: %d items filtered out (wrong slot, wrong armor type or level too high).",
+  ["CAND_CACHED"]     = "All item data already cached. Done.",
+  ["CAND_REQUEST"]    = "%d unknown items, requesting them (approx. %d seconds). Runs in the background, /bll stop aborts.",
+  ["CAND_ROUND2"]     = "%d items still open, second round.",
+  ["CAND_DONE"]       = "Done: %d items read%s.",
+  ["CAND_MISSING"]    = ", %d not found",
+  ["CAND_IDLE"]       = "Nothing is running right now.",
+  ["CAND_ABORTED"]    = "Aborted. %d items are saved and will be kept.",
+
+  -- ---- Fortschritt im Fenster ----
+  ["PROG_INDEX"]      = "Searching database ...",
+  ["PROG_REQUEST"]    = "Requesting items: %d/%d (round %d)",
+  ["PROG_WAIT"]       = "Waiting for server replies (%.0fs)",
+  ["PROG_COLLECT"]    = "Evaluating replies ...",
+
+  -- ---- Slash-Befehle ----
+  ["DEBUG_STATE"]     = "Debug: %s",
+  ["USAGE_DUMP"]      = "Usage: /bll dump <itemID>",
+  ["USAGE_SRC"]       = "Usage: /bll src <itemID>",
+  ["USAGE_SET"]       = "Usage: /bll set <itemID> - shows set and bonuses of the item",
+  ["SRC_HEADER"]      = "Sources for item %d:",
+  ["WEIGHTS_RESET"]   = "Stat weights reset.",
+  ["WEIGHT_SET"]      = "Weight %s = %s",
+  ["WEIGHT_REMOVED"]  = "removed",
+  ["WEIGHTS_CURRENT"] = "Current weights:",
+  ["NO_SETDATA"]      = "No set data loaded.",
+  ["ITEM_NO_SET"]     = "Item %d belongs to no set.",
+  ["SET_WORN"]        = "%s - %d/%d worn",
+  ["SET_ACTIVE"]      = "active",
+  ["SET_INACTIVE"]    = "inactive",
+  ["USECD_SET"]       = "Assumed cooldown for use effects: %d seconds",
+  ["USECD_INFO"]      = "Assumed cooldown: %d seconds. Change with /bll usecd <seconds>. The database provides none, so it is estimated.",
+  ["RATE_SET"]        = "Query rate: %d items/second",
+  ["RATE_INFO"]       = "Current query rate: %d items/second. Change with /bll rate <1-30>. Higher values put more load on the server.",
+  ["CACHE_CLEARED"]   = "Item cache cleared.",
+  ["UNUSED_STATE"]    = "Unreachable sources (developer entries, 0%% drop): %s",
+  ["UNUSED_SHOWN"]    = "are shown",
+  ["UNUSED_HIDDEN"]   = "are hidden",
+  ["REOPEN_WINDOW"]   = "Reopen the window for it to take effect.",
+  ["USAGE_CAT"]       = "Usage: /bll cat <zone name> <dungeon|raid|world|worldboss|battleground|quest|vendor|object>",
+  ["CAT_EXAMPLE"]     = "Example: /bll cat Concavius worldboss",
+  ["CAT_OWN"]         = "Your own assignments:",
+  ["CAT_UNKNOWN"]     = "Unknown category: %s",
+  ["CAT_SET"]         = "%s now counts as %s. Reopen the window.",
+  ["AHEAD_SET"]       = "Planning ahead: %d levels. The search now covers level %d-%d. Search again with /bll up.",
+  ["AHEAD_INFO"]      = "Planning ahead: %d levels - that is what /bll up searches. Change with /bll ahead <0-60>, 0 shows only what you can wear right now.",
+  ["SPEC_NONE"]       = "No spec detected (%d talent points spent, %d needed). Class weights apply.",
+  ["SPEC_FOUND"]      = "Spec: %s (%d points total)",
+  ["INFO_LINE"]       = "pfQuest: %s | ItemDB: %s | Language: %s",
+
+  -- ---- Hilfe ----
+  ["HELP_HEADER"]     = "Commands:",
+  ["HELP_MAIN"]       = "open/close the window",
+  ["HELP_LANG"]       = "display language",
+  ["HELP_UP"]         = "search for upgrades (n = level span, default from /bll ahead)",
+  ["HELP_STOP"]       = "abort a running query",
+  ["HELP_RATE"]       = "query rate in items/second (default 8)",
+  ["HELP_FORGET"]     = "clear the item cache",
+  ["HELP_SPEC"]       = "show detected spec",
+  ["HELP_AHEAD"]      = "how many levels to plan ahead",
+  ["HELP_CAT"]        = "reassign a location",
+  ["HELP_UNUSED"]     = "show/hide unreachable sources",
+  ["HELP_WEIGHT"]     = "show stat weights",
+  ["HELP_WEIGHT_SET"] = "set a weight",
+  ["HELP_WEIGHT_RST"] = "reset weights",
+  ["HELP_SCAN"]       = "rescan gear and print it",
+  ["HELP_DUMP"]       = "show raw tooltip lines of an item",
+  ["HELP_SRC"]        = "show sources of an item",
+  ["HELP_SET"]        = "set and bonuses of an item",
+  ["HELP_USECD"]      = "assumed cooldown for use effects",
+  ["HELP_INFO"]       = "status line",
+  ["HELP_DEBUG"]      = "toggle debug output",
+
+  -- ---- Herkunft eines Kandidaten ----
+  ["NO_LOCATION_YET"] = "no known location",
+  ["UNSCORED_EQUIPPED"] = "effect not scored",
+  ["UNSCORED_HINT"]   = "The equipped item has an effect the addon cannot put a number on. Close suggestions are held back - they would be guesses.",
+  ["UNSCORED_SHORT"]  = "comparison incomplete",
+  ["DUMP_UNSCORED"]   = "Not scored:",
 }
 
 local L_deDE = {
@@ -113,6 +209,102 @@ local L_deDE = {
   ["NEED_MAILBOX"]    = "Dafuer musst du an einem",
   ["MAILBOX"]         = "Briefkasten",
   ["NEED_MAILBOX_2"]  = "stehen. Der Name laesst sich aber auch markieren und mit Strg+C kopieren.",
+
+  -- ---- Statusmeldungen: Start und Datenbanken ----
+  ["MIGRATED"]        = "Einstellungen aus OctoLootline uebernommen.",
+  ["ITEMDB_BROKEN"]   = "ItemDB.lua fehlt oder wurde ueberschrieben. Importziel ist Data/ItemData.lua, nicht ItemDB.lua!",
+  ["ITEMDB_LOADED"]   = "ItemDB: %d Items geladen",
+  ["SETDB_LOADED"]    = "SetDB: %d Sets geladen",
+  ["ITEMDB_NONE"]     = "nicht importiert",
+  ["YES"]             = "ja",
+  ["NO"]              = "nein",
+  ["ON"]              = "an",
+  ["OFF"]             = "aus",
+
+  -- ---- Kandidatensuche ----
+  ["CAND_NO_PFQUEST"] = "pfQuest fehlt - ohne die Datenbank keine Vorschlaege.",
+  ["CAND_SEARCHING"]  = "Suche Kandidaten fuer Stufe %d-%d ...",
+  ["CAND_FOUND"]      = "%d Kandidaten gefunden. Hole Itemdaten ...",
+  ["CAND_FOUND_MIX"]  = "%d Kandidaten gefunden (%d mit Fundort, %d aus dem Import). Hole Itemdaten ...",
+  ["CAND_IMPORT"]     = "Import ausgewertet: %d Items aussortiert (falscher Slot, falsche Ruestungsart oder Stufe zu hoch).",
+  ["CAND_CACHED"]     = "Alle Itemdaten bereits im Cache. Fertig.",
+  ["CAND_REQUEST"]    = "%d unbekannte Items, frage sie an (ca. %d Sekunden). Laeuft im Hintergrund, /bll stop bricht ab.",
+  ["CAND_ROUND2"]     = "%d Items noch offen, zweite Runde.",
+  ["CAND_DONE"]       = "Fertig: %d Items eingelesen%s.",
+  ["CAND_MISSING"]    = ", %d nicht auffindbar",
+  ["CAND_IDLE"]       = "Es laeuft gerade nichts.",
+  ["CAND_ABORTED"]    = "Abgebrochen. %d Items sind gespeichert und bleiben erhalten.",
+
+  -- ---- Fortschritt im Fenster ----
+  ["PROG_INDEX"]      = "Durchsuche Datenbank ...",
+  ["PROG_REQUEST"]    = "Frage Items an: %d/%d (Runde %d)",
+  ["PROG_WAIT"]       = "Warte auf Serverantworten (%.0fs)",
+  ["PROG_COLLECT"]    = "Werte Antworten aus ...",
+
+  -- ---- Slash-Befehle ----
+  ["DEBUG_STATE"]     = "Debug: %s",
+  ["USAGE_DUMP"]      = "Nutzung: /bll dump <itemID>",
+  ["USAGE_SRC"]       = "Nutzung: /bll src <itemID>",
+  ["USAGE_SET"]       = "Nutzung: /bll set <itemID> - zeigt Set und Boni des Items",
+  ["SRC_HEADER"]      = "Quellen fuer Item %d:",
+  ["WEIGHTS_RESET"]   = "Statgewichte zurueckgesetzt.",
+  ["WEIGHT_SET"]      = "Gewicht %s = %s",
+  ["WEIGHT_REMOVED"]  = "entfernt",
+  ["WEIGHTS_CURRENT"] = "Aktuelle Gewichte:",
+  ["NO_SETDATA"]      = "Keine Setdaten geladen.",
+  ["ITEM_NO_SET"]     = "Item %d gehoert zu keinem Set.",
+  ["SET_WORN"]        = "%s - %d/%d getragen",
+  ["SET_ACTIVE"]      = "aktiv",
+  ["SET_INACTIVE"]    = "inaktiv",
+  ["USECD_SET"]       = "Angenommene Abklingzeit fuer Use-Effekte: %d Sekunden",
+  ["USECD_INFO"]      = "Angenommene Abklingzeit: %d Sekunden. Aendern mit /bll usecd <sekunden>. Die Datenbank liefert keine, deshalb wird geschaetzt.",
+  ["RATE_SET"]        = "Abfragerate: %d Items/Sekunde",
+  ["RATE_INFO"]       = "Aktuelle Abfragerate: %d Items/Sekunde. Aendern mit /bll rate <1-30>. Hoehere Werte belasten den Server staerker.",
+  ["CACHE_CLEARED"]   = "Itemcache geleert.",
+  ["UNUSED_STATE"]    = "Unerreichbare Quellen (Entwicklereintraege, 0%% Drop): %s",
+  ["UNUSED_SHOWN"]    = "werden angezeigt",
+  ["UNUSED_HIDDEN"]   = "werden ausgeblendet",
+  ["REOPEN_WINDOW"]   = "Fenster neu oeffnen, damit es wirkt.",
+  ["USAGE_CAT"]       = "Nutzung: /bll cat <Zonenname> <dungeon|raid|welt|weltboss|schlachtfeld|quest|haendler|objekt>",
+  ["CAT_EXAMPLE"]     = "Beispiel: /bll cat Concavius weltboss",
+  ["CAT_OWN"]         = "Eigene Zuordnungen:",
+  ["CAT_UNKNOWN"]     = "Unbekannte Kategorie: %s",
+  ["CAT_SET"]         = "%s gilt jetzt als %s. Fenster neu oeffnen.",
+  ["AHEAD_SET"]       = "Vorausplanung: %d Stufen. Die Suche umfasst jetzt Stufe %d-%d. Neu suchen mit /bll up.",
+  ["AHEAD_INFO"]      = "Vorausplanung: %d Stufen - so weit sucht /bll up. Aendern mit /bll ahead <0-60>, 0 zeigt nur sofort Tragbares.",
+  ["SPEC_NONE"]       = "Keine Spezialisierung erkannt (%d Talentpunkte vergeben, noetig sind %d). Es gelten die Klassenwerte.",
+  ["SPEC_FOUND"]      = "Spezialisierung: %s (%d Punkte gesamt)",
+  ["INFO_LINE"]       = "pfQuest: %s | ItemDB: %s | Sprache: %s",
+
+  -- ---- Hilfe ----
+  ["HELP_HEADER"]     = "Befehle:",
+  ["HELP_MAIN"]       = "Fenster oeffnen/schliessen",
+  ["HELP_LANG"]       = "Anzeigesprache",
+  ["HELP_UP"]         = "Upgrades suchen (n = Stufenspanne, Standard aus /bll ahead)",
+  ["HELP_STOP"]       = "laufende Abfrage abbrechen",
+  ["HELP_RATE"]       = "Abfragerate in Items/Sekunde (Standard 8)",
+  ["HELP_FORGET"]     = "Itemcache leeren",
+  ["HELP_SPEC"]       = "erkannte Spezialisierung zeigen",
+  ["HELP_AHEAD"]      = "wie viele Stufen vorausgeplant wird",
+  ["HELP_CAT"]        = "Fundort umsortieren",
+  ["HELP_UNUSED"]     = "unerreichbare Quellen ein/ausblenden",
+  ["HELP_WEIGHT"]     = "Statgewichte zeigen",
+  ["HELP_WEIGHT_SET"] = "Gewicht setzen",
+  ["HELP_WEIGHT_RST"] = "Gewichte zuruecksetzen",
+  ["HELP_SCAN"]       = "Ausruestung neu scannen und ausgeben",
+  ["HELP_DUMP"]       = "rohe Tooltipzeilen eines Items zeigen",
+  ["HELP_SRC"]        = "Quellen eines Items zeigen",
+  ["HELP_SET"]        = "Set und Boni eines Items",
+  ["HELP_USECD"]      = "angenommene Abklingzeit fuer Use-Effekte",
+  ["HELP_INFO"]       = "Statuszeile",
+  ["HELP_DEBUG"]      = "Debugausgabe an/aus",
+
+  -- ---- Herkunft eines Kandidaten ----
+  ["NO_LOCATION_YET"] = "kein bekannter Fundort",
+  ["UNSCORED_EQUIPPED"] = "Effekt nicht bewertet",
+  ["UNSCORED_HINT"]   = "Das angelegte Teil hat einen Effekt, den das Addon nicht in Punkte fassen kann. Knappe Vorschlaege bleiben deshalb aussen vor - sie waeren geraten.",
+  ["UNSCORED_SHORT"]  = "Vergleich unvollstaendig",
+  ["DUMP_UNSCORED"]   = "Nicht bewertet:",
 }
 
 -- BLL.L bleibt immer dieselbe Tabelle. Core.lua und Sources.lua halten
@@ -269,6 +461,28 @@ local P_deDE = {
 }
 
 BLL.PATTERNS = (BLL.clientLocale == "deDE") and P_deDE or P_enUS
+
+------------------------------------------------------------------
+-- Hinweise auf Effekte, die kein Muster in Werte uebersetzt
+--
+-- Proc-Effekte sind in Vanilla haeufig und tauchen im Tooltip als Text
+-- auf, nicht als Wert: "Chance bei Treffer", "2% Chance, einen
+-- zusaetzlichen Angriff auszufuehren". Ein Item kann dadurch stark sein,
+-- ohne dass der Scanner einen einzigen Punkt findet.
+--
+-- Diese Muster markieren solche Zeilen, damit der Vergleich weiss, dass
+-- er unvollstaendig ist. Sie greifen nur bei Zeilen, auf die vorher KEIN
+-- Wertmuster gepasst hat - "erhoeht Eure Chance auszuweichen um 1%" ist
+-- also nicht betroffen, das ist laengst als DODGE erfasst.
+--
+-- Bewusst kurz: jedes Muster, das zu breit trifft, unterdrueckt echte
+-- Vorschlaege. Verglichen wird kleingeschrieben.
+------------------------------------------------------------------
+
+BLL.EFFECT_HINTS = (BLL.clientLocale == "deDE")
+  and { "chance", "benutzen:", "wenn getroffen", "bei treffer" }
+  or  { "chance", "use:", "when struck", "on hit" }
+
 
 -- Schadensbereich wird separat behandelt, weil zwei Zahlen gecaptured werden.
 BLL.DMG_PATTERN = (BLL.clientLocale == "deDE")

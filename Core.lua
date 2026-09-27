@@ -13,7 +13,7 @@ BananaLootline = BananaLootline or {}
 local BLL = BananaLootline
 local L = BLL.L
 
-BLL.VERSION = "0.18.0"
+BLL.VERSION = "0.19.0"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -129,7 +129,7 @@ frame:SetScript("OnEvent", function()
 
     BLL:Print(L["LOADED"] .. " |cff666666(v" .. BLL.VERSION .. ")|r")
     if BLL.migrated then
-      BLL:Print("Einstellungen aus OctoLootline uebernommen.")
+      BLL:Print(L["MIGRATED"])
     end
     if BLL.Sources.available then
       BLL:Print("|cff00ff00" .. L["PFQUEST_OK"] .. "|r")
@@ -137,14 +137,13 @@ frame:SetScript("OnEvent", function()
       BLL:Print("|cffff8800" .. L["NO_PFQUEST"] .. "|r")
     end
     if not BLL.ItemDB then
-      BLL:Print("|cffff0000ItemDB.lua fehlt oder wurde ueberschrieben. "
-        .. "Importziel ist Data/ItemData.lua, nicht ItemDB.lua!|r")
+      BLL:Print("|cffff0000" .. L["ITEMDB_BROKEN"] .. "|r")
     elseif not BLL.ItemDB.loaded then
       BLL:Print("|cffff8800" .. L["NO_ITEMDB"] .. "|r")
     else
-      BLL:Print("|cff00ff00ItemDB: " .. BLL.ItemDB.count .. " Items geladen|r")
+      BLL:Print("|cff00ff00" .. string.format(L["ITEMDB_LOADED"], BLL.ItemDB.count) .. "|r")
       if BLL.SetDB and BLL.SetDB.loaded then
-        BLL:Print("|cff00ff00SetDB: " .. BLL.SetDB.count .. " Sets geladen|r")
+        BLL:Print("|cff00ff00" .. string.format(L["SETDB_LOADED"], BLL.SetDB.count) .. "|r")
       end
     end
 
@@ -239,7 +238,8 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
 
   elseif command == "debug" then
     BananaLootlineDB.debug = not BananaLootlineDB.debug
-    BLL:Print("Debug: " .. (BananaLootlineDB.debug and "an" or "aus"))
+    BLL:Print(string.format(L["DEBUG_STATE"],
+      BananaLootlineDB.debug and L["ON"] or L["OFF"]))
 
   elseif command == "scan" then
     -- Cache leeren: sonst ueberleben falsch geparste Eintraege aus einer
@@ -254,7 +254,7 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
     -- Patterns in Locale.lua gegen den echten Client zu verifizieren.
     local id = tonumber(param)
     if not id then
-      BLL:Print("Nutzung: /bll dump <itemID>")
+      BLL:Print(L["USAGE_DUMP"])
     else
       BLL.Scanner:DumpLines(id)
     end
@@ -262,13 +262,13 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
   elseif command == "src" then
     local id = tonumber(param)
     if not id then
-      BLL:Print("Nutzung: /bll src <itemID>")
+      BLL:Print(L["USAGE_SRC"])
     else
       local list = BLL.Sources:GetItemSources(id)
       if not list or table.getn(list) == 0 then
         BLL:Print(L["NO_SOURCE"])
       else
-        BLL:Print("Quellen fuer Item " .. id .. ":")
+        BLL:Print(string.format(L["SRC_HEADER"], id))
         for i = 1, table.getn(list) do
           local s = list[i]
           DEFAULT_CHAT_FRAME:AddMessage("   " .. s.typeLabel .. ": " .. s.name
@@ -286,13 +286,14 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
     local _, _, stat, value = string.find(param, "^(%a+)%s*(%-?%d*%.?%d*)$")
     if param == "reset" then
       BLL.Weights:Reset()
-      BLL:Print("Statgewichte zurueckgesetzt.")
+      BLL:Print(L["WEIGHTS_RESET"])
     elseif stat then
       BLL.Weights:Set(string.upper(stat), tonumber(value))
-      BLL:Print("Gewicht " .. string.upper(stat) .. " = " .. (value ~= "" and value or "entfernt"))
+      BLL:Print(string.format(L["WEIGHT_SET"], string.upper(stat),
+        (value ~= "") and value or L["WEIGHT_REMOVED"]))
     else
       local w = BLL.Weights:Get()
-      BLL:Print("Aktuelle Gewichte:")
+      BLL:Print(L["WEIGHTS_CURRENT"])
       for i = 1, table.getn(BLL.STATS) do
         local k = BLL.STATS[i]
         if w[k] then
@@ -304,19 +305,21 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
   elseif command == "set" then
     local id = tonumber(param)
     if not id then
-      BLL:Print("Nutzung: /bll set <itemID> - zeigt Set und Boni des Items")
+      BLL:Print(L["USAGE_SET"])
     elseif not BLL.SetDB.loaded then
-      BLL:Print("Keine Setdaten geladen.")
+      BLL:Print(L["NO_SETDATA"])
     else
       local setID, set = BLL.SetDB:GetSetOf(id)
       if not setID then
-        BLL:Print("Item " .. id .. " gehoert zu keinem Set.")
+        BLL:Print(string.format(L["ITEM_NO_SET"], id))
       else
         local worn = BLL.SetDB:CountEquipped(setID)
-        BLL:Print(set.name .. " - " .. worn .. "/" .. table.getn(set.items) .. " getragen")
+        BLL:Print(string.format(L["SET_WORN"], set.name, worn, table.getn(set.items)))
         for i = 1, table.getn(set.bonuses) do
           local b = set.bonuses[i]
-          local aktiv = (worn >= b.p) and "|cff00ff00[aktiv]|r" or "|cff888888[inaktiv]|r"
+          local aktiv = (worn >= b.p)
+            and ("|cff00ff00[" .. L["SET_ACTIVE"] .. "]|r")
+            or  ("|cff888888[" .. L["SET_INACTIVE"] .. "]|r")
           DEFAULT_CHAT_FRAME:AddMessage("   " .. aktiv .. " (" .. b.p .. ") " .. (b.t or ""))
         end
       end
@@ -326,12 +329,10 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
     local n = tonumber(param)
     if n and n > 0 then
       BananaLootlineDB.useCooldown = n
-      BLL:Print("Angenommene Abklingzeit fuer Use-Effekte: " .. n .. " Sekunden")
+      BLL:Print(string.format(L["USECD_SET"], n))
     else
-      BLL:Print("Angenommene Abklingzeit: "
-        .. (BananaLootlineDB.useCooldown or BLL.Weights.DEFAULT_COOLDOWN)
-        .. " Sekunden. Aendern mit /bll usecd <sekunden>. "
-        .. "Die Datenbank liefert keine, deshalb wird geschaetzt.")
+      BLL:Print(string.format(L["USECD_INFO"],
+        BananaLootlineDB.useCooldown or BLL.Weights.DEFAULT_COOLDOWN))
     end
 
   elseif command == "stop" then
@@ -341,71 +342,74 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
     local n = tonumber(param)
     if n and n >= 1 and n <= 30 then
       BananaLootlineDB.queryRate = n
-      BLL:Print("Abfragerate: " .. n .. " Items/Sekunde")
+      BLL:Print(string.format(L["RATE_SET"], n))
     else
-      BLL:Print("Aktuelle Abfragerate: " .. (BananaLootlineDB.queryRate or 8)
-        .. " Items/Sekunde. Aendern mit /bll rate <1-30>. "
-        .. "Hoehere Werte belasten den Server staerker.")
+      BLL:Print(string.format(L["RATE_INFO"], BananaLootlineDB.queryRate or 8))
     end
 
   elseif command == "forget" then
     BananaLootlineDB.itemcache = {}
     BLL.Candidates.pool = nil
     BLL.Candidates.state = "idle"
-    BLL:Print("Itemcache geleert.")
+    BLL:Print(L["CACHE_CLEARED"])
 
   elseif command == "unused" then
     BananaLootlineDB.showUnreachable = not BananaLootlineDB.showUnreachable
-    BLL:Print("Unerreichbare Quellen (Entwicklereintraege, 0%% Drop): "
-      .. (BananaLootlineDB.showUnreachable and "werden angezeigt"
-                                          or "werden ausgeblendet"))
-    BLL:Print("Fenster neu oeffnen, damit es wirkt.")
+    -- string.format, nicht Verkettung: das doppelte Prozentzeichen im
+    -- Text wird sonst woertlich ausgegeben.
+    BLL:Print(string.format(L["UNUSED_STATE"],
+      BananaLootlineDB.showUnreachable and L["UNUSED_SHOWN"] or L["UNUSED_HIDDEN"]))
+    BLL:Print(L["REOPEN_WINDOW"])
 
   elseif command == "cat" then
     local _, _, zone, cat = string.find(param, "^(.-)%s+(%a+)$")
-    local VALID = { dungeon="DUNGEON", raid="RAID", welt="WELT",
-                    weltboss="WELTBOSS", schlachtfeld="SCHLACHTFELD",
-                    quest="QUEST", haendler="HAENDLER", objekt="OBJEKT" }
+    -- Beide Sprachen gelten immer. Ein englischer Spieler tippt "vendor",
+    -- ein deutscher "haendler" - beide muessen ankommen, unabhaengig
+    -- davon, welche Anzeigesprache gerade eingestellt ist.
+    local VALID = { dungeon="DUNGEON", raid="RAID",
+                    welt="WELT",           world="WELT",
+                    weltboss="WELTBOSS",   worldboss="WELTBOSS",
+                    schlachtfeld="SCHLACHTFELD", battleground="SCHLACHTFELD",
+                    quest="QUEST",
+                    haendler="HAENDLER",   vendor="HAENDLER",
+                    objekt="OBJEKT",       object="OBJEKT" }
     if not zone or zone == "" then
-      BLL:Print("Nutzung: /bll cat <Zonenname> <dungeon|raid|welt|weltboss|"
-        .. "schlachtfeld|quest|haendler|objekt>")
-      BLL:Print("Beispiel: /bll cat Concavius weltboss")
+      BLL:Print(L["USAGE_CAT"])
+      BLL:Print(L["CAT_EXAMPLE"])
       local own = BananaLootlineDB.zoneCategory
       if own then
-        BLL:Print("Eigene Zuordnungen:")
+        BLL:Print(L["CAT_OWN"])
         for k, v in pairs(own) do
           DEFAULT_CHAT_FRAME:AddMessage("   " .. k .. " -> " .. v)
         end
       end
     elseif not VALID[string.lower(cat)] then
-      BLL:Print("Unbekannte Kategorie: " .. cat)
+      BLL:Print(string.format(L["CAT_UNKNOWN"], cat))
     else
       BLL.Candidates:SetZoneCategory(zone, VALID[string.lower(cat)])
-      BLL:Print(zone .. " gilt jetzt als " .. VALID[string.lower(cat)]
-        .. ". Fenster neu oeffnen.")
+      BLL:Print(string.format(L["CAT_SET"], zone, VALID[string.lower(cat)]))
     end
 
   elseif command == "ahead" then
     local n = tonumber(param)
     if n and n >= 0 and n <= 60 then
       BananaLootlineDB.planAhead = n
-      BLL:Print("Vorausplanung: " .. n .. " Stufen. Neu suchen mit /bll up.")
+      -- Das Band gleich mit ausgeben. Frueher war nicht erkennbar, dass
+      -- die Einstellung ueberhaupt etwas an der Suche aendert.
+      local lo, hi = BLL.Candidates:Band()
+      BLL:Print(string.format(L["AHEAD_SET"], n, lo, hi))
     else
-      BLL:Print("Vorausplanung: " .. BLL.Candidates:PlanAhead()
-        .. " Stufen. Teile ueber deiner Stufe erscheinen mit Vermerk. "
-        .. "Aendern mit /bll ahead <0-60>, 0 zeigt nur sofort Tragbares.")
+      BLL:Print(string.format(L["AHEAD_INFO"], BLL.Candidates:PlanAhead()))
     end
 
   elseif command == "spec" then
     local tab, name, total = BLL.Weights:DetectSpec()
     BLL.Weights:Get()
     if not tab then
-      BLL:Print("Keine Spezialisierung erkannt (" .. (total or 0)
-        .. " Talentpunkte vergeben, noetig sind "
-        .. BLL.Weights.MIN_POINTS .. "). Es gelten die Klassenwerte.")
+      BLL:Print(string.format(L["SPEC_NONE"], total or 0, BLL.Weights.MIN_POINTS))
     else
-      BLL:Print("Spezialisierung: " .. (BLL.Weights.activeSpec or name or "?")
-        .. " (" .. (total or 0) .. " Punkte gesamt)")
+      BLL:Print(string.format(L["SPEC_FOUND"],
+        BLL.Weights.activeSpec or name or "?", total or 0))
     end
     for i = 1, GetNumTalentTabs() do
       local n, _, p = GetTalentTabInfo(i)
@@ -413,32 +417,48 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
     end
 
   elseif command == "info" then
-    BLL:Print("pfQuest: " .. (BLL.Sources.available and "ja" or "nein")
-      .. " | ItemDB: " .. ((BLL.ItemDB and BLL.ItemDB.loaded) and (BLL.ItemDB.count .. " Items") or "nicht importiert")
-      .. " | Locale: " .. BLL.locale)
+    BLL:Print(string.format(L["INFO_LINE"],
+      BLL.Sources.available and L["YES"] or L["NO"],
+      (BLL.ItemDB and BLL.ItemDB.loaded)
+        and (BLL.ItemDB.count .. " Items") or L["ITEMDB_NONE"],
+      BLL.locale))
 
   elseif command == "help" then
-    BLL:Print("Befehle:")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll            - Fenster oeffnen/schliessen")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll lang de|en|auto - Anzeigesprache")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll up [n]     - Upgrades suchen (n = Stufenspanne, Standard 6)")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll stop       - laufende Abfrage abbrechen")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll rate <n>   - Abfragerate in Items/Sekunde (Standard 8)")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll forget     - Itemcache leeren")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll spec       - erkannte Spezialisierung zeigen")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll ahead <n>  - wie viele Stufen vorausgeplant wird")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll cat <Zone> <Kategorie> - Fundort umsortieren")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll unused     - unerreichbare Quellen ein/ausblenden")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll weight     - Statgewichte zeigen")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll weight STR 3   - Gewicht setzen")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll weight reset   - Gewichte zuruecksetzen")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll scan       - Ausruestung neu scannen + ausgeben")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll dump <id>  - rohe Tooltipzeilen eines Items zeigen")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll src <id>   - Quellen eines Items zeigen")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll set <id>   - Set und Boni eines Items")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll usecd <s>  - angenommene Abklingzeit fuer Use-Effekte")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll info       - Statuszeile")
-    DEFAULT_CHAT_FRAME:AddMessage("   /bll debug      - Debugausgabe an/aus")
+    -- Befehl und Beschreibung getrennt: der Befehl ist sprachneutral,
+    -- nur die Beschreibung wird uebersetzt.
+    local HELP = {
+      { "/bll",                 "HELP_MAIN"       },
+      { "/bll lang de|en|auto", "HELP_LANG"       },
+      { "/bll up [n]",          "HELP_UP"         },
+      { "/bll stop",            "HELP_STOP"       },
+      { "/bll rate <n>",        "HELP_RATE"       },
+      { "/bll forget",          "HELP_FORGET"     },
+      { "/bll spec",            "HELP_SPEC"       },
+      { "/bll ahead <n>",       "HELP_AHEAD"      },
+      { "/bll cat <zone> <cat>","HELP_CAT"        },
+      { "/bll unused",          "HELP_UNUSED"     },
+      { "/bll weight",          "HELP_WEIGHT"     },
+      { "/bll weight STR 3",    "HELP_WEIGHT_SET" },
+      { "/bll weight reset",    "HELP_WEIGHT_RST" },
+      { "/bll scan",            "HELP_SCAN"       },
+      { "/bll dump <id>",       "HELP_DUMP"       },
+      { "/bll src <id>",        "HELP_SRC"        },
+      { "/bll set <id>",        "HELP_SET"        },
+      { "/bll usecd <s>",       "HELP_USECD"      },
+      { "/bll info",            "HELP_INFO"       },
+      { "/bll debug",           "HELP_DEBUG"      },
+    }
+    BLL:Print(L["HELP_HEADER"])
+    for i = 1, table.getn(HELP) do
+      local cmdText = HELP[i][1]
+      -- auf feste Breite auffuellen, damit die Beschreibungen untereinander
+      -- stehen. string.rep statt %-20s: Lua 5.0 formatiert das zuverlaessig,
+      -- aber so bleibt es auch mit Farbcodes berechenbar.
+      local pad = 22 - string.len(cmdText)
+      if pad < 1 then pad = 1 end
+      DEFAULT_CHAT_FRAME:AddMessage("   |cffffcc33" .. cmdText .. "|r"
+        .. string.rep(" ", pad) .. "- " .. L[HELP[i][2]])
+    end
 
   else
     BLL.UI:Toggle()

@@ -29,6 +29,11 @@ local BLL = BananaLootline
 BLL.Candidates = {}
 local Cand = BLL.Candidates
 
+-- BLL.L bleibt beim Sprachwechsel dieselbe Tabelle, nur ihr Inhalt wird
+-- ausgetauscht. Eine lokale Referenz darauf ist deshalb sicher und zeigt
+-- nach einem Wechsel auf die neuen Texte.
+local L = BLL.L
+
 -- Hochzaehlen, wenn sich aendert, WELCHE Felder ein Cache-Eintrag braucht.
 -- Eintraege aelterer Fassungen werden dann beim naechsten Lauf neu
 -- aufgebaut, statt stillschweigend mit fehlenden Feldern weiterzulaufen.
@@ -267,17 +272,34 @@ local function ParseLevel(str)
   return tonumber(low)
 end
 
--- Niedrigste Quellenstufe eines Items. Niedrigste, weil ein Item, das auch
--- ein Stufe-25-Mob droppt, fuer einen Stufe-25-Charakter erreichbar ist -
--- selbst wenn es woanders von etwas Hoeherem faellt.
-function Cand:SourceLevel(itemID, entry)
-  local best = nil
+-- Quellenstufe eines Items.
+--
+-- Frueher wurde immer das globale Minimum ueber alle Quellen genommen,
+-- mit der Begruendung, ein Item sei ab der niedrigsten Quelle erreichbar.
+-- Das stimmt fuer die Erreichbarkeit, zerstoert aber die Suche: ein
+-- Raidteil, das irgendwo auch ein Stufe-40-Mob traegt, bekam die 40 und
+-- fiel aus jedem Band eines Stufe-60-Charakters heraus. Am Stufenende
+-- blieb dadurch fast nichts uebrig.
+--
+-- Jetzt gilt: liegt eine Quelle im gesuchten Band, zaehlt die niedrigste
+-- davon. Nur wenn keine einzige Quelle im Band liegt, faellt die Funktion
+-- auf das globale Minimum zurueck - dann entscheidet der Bandvergleich
+-- beim Aufrufer wie gehabt, dass das Item nicht passt.
+function Cand:SourceLevel(itemID, entry, band)
+  local lowest, inBand = nil, nil
   local S = BLL.Sources
+
+  local function consider(lvl)
+    if not lvl then return end
+    if not lowest or lvl < lowest then lowest = lvl end
+    if band and lvl >= band.min and lvl <= band.max then
+      if not inBand or lvl < inBand then inBand = lvl end
+    end
+  end
 
   if entry["U"] then
     for unitID in pairs(entry["U"]) do
-      local lvl = ParseLevel(S:UnitLevel(unitID))
-      if lvl and (not best or lvl < best) then best = lvl end
+      consider(ParseLevel(S:UnitLevel(unitID)))
     end
   end
 
@@ -285,13 +307,12 @@ function Cand:SourceLevel(itemID, entry)
     for questID in pairs(entry["Q"]) do
       local q = S.quests[questID]
       if type(q) == "table" then
-        local lvl = ParseLevel(q["lvl"]) or ParseLevel(q["min"])
-        if lvl and (not best or lvl < best) then best = lvl end
+        consider(ParseLevel(q["lvl"]) or ParseLevel(q["min"]))
       end
     end
   end
 
-  return best
+  return inBand or lowest
 end
 
 ------------------------------------------------------------------
@@ -299,22 +320,48 @@ end
 ------------------------------------------------------------------
 
 local CHUNK = 1500        -- Eintraege pro Frame
+
+-- So weit wird nach UNTEN gesucht. Fest, nicht an die Vorausplanung
+-- gekoppelt: "ahead" heisst vorausplanen und meint nach oben. Frueher
+-- war das Band level-span/2 bis level+span, wodurch ein Stufe-60-
+-- Charakter mit dem Standardwert 6 nur 57 bis 63 absuchte. Genau in
+-- diesem schmalen Streifen liegt am Stufenende fast nichts.
+local LOOKBACK = 10
+
+-- Hoechste Quellenstufe in Vanilla. Darueber gibt es keine Mobs, ein
+-- groesseres "ahead" kann das Band nach oben also nicht mehr weiten.
+local MAX_SOURCE_LEVEL = 63
+
+-- Vorsprung, den ein Kandidat braucht, wenn das angelegte Teil einen
+-- Effekt hat, den der Scanner nicht in Punkte fassen kann.
+--
+-- Beide Zahlen sind geschaetzt, nicht ausgerechnet. Ein Proc-Effekt in
+-- Vanilla liegt bei typischen Gewichten grob zwischen zehn und vierzig
+-- Punkten; 12 Punkte plus ein Fuenftel des bekannten Werts filtert die
+-- offensichtlich schlechten Ratschlaege heraus, ohne echte Spruenge zu
+-- verschlucken. Wenn der Feldtest zeigt, dass zu viel oder zu wenig
+-- durchkommt, sind das die beiden Stellschrauben.
+local UNSCORED_FLAT  = 12
+local UNSCORED_SHARE = 0.20
 local indexKey = nil
 local indexBand = nil
 
 function Cand:StartIndex(minLvl, maxLvl)
   if not BLL.Sources.available then
-    BLL:Print("|cffff0000pfQuest fehlt - ohne die Datenbank keine Vorschlaege.|r")
+    BLL:Print("|cffff0000" .. L["CAND_NO_PFQUEST"] .. "|r")
     return false
   end
 
-  self.pool     = {}
-  self.poolSize = 0
+  self.pool       = {}
+  self.poolSize   = 0
+  self.fromImport = {}    -- [itemID] = 1, wenn pfQuest das Item nicht kennt
+  self.pfqCount   = 0
+  self.importCount = 0
   self.state    = "indexing"
   indexKey  = nil
   indexBand = { min = minLvl, max = maxLvl }
 
-  BLL:Print(string.format("Suche Kandidaten fuer Stufe %d-%d ...", minLvl, maxLvl))
+  BLL:Print(string.format(L["CAND_SEARCHING"], minLvl, maxLvl))
   return true
 end
 
@@ -327,7 +374,7 @@ function Cand:IndexChunk()
 
   while key and processed < CHUNK do
     if type(entry) == "table" then
-      local lvl = self:SourceLevel(key, entry)
+      local lvl = self:SourceLevel(key, entry, indexBand)
       if lvl and lvl >= indexBand.min and lvl <= indexBand.max then
         self.pool[key] = lvl
         self.poolSize = self.poolSize + 1
@@ -339,8 +386,99 @@ function Cand:IndexChunk()
   end
 
   if not key then
-    BLL:Print(string.format("%d Kandidaten gefunden. Hole Itemdaten ...", self.poolSize))
+    -- pfQuest ist durch. Was hier im Pool liegt, hat einen Fundort.
+    self.pfqCount = self.poolSize
+    self:StartImportIndex()
+  end
+end
+
+------------------------------------------------------------------
+-- Schritt 1b: Pool aus dem Import ergaenzen
+--
+-- pfQuest liefert nur Items, deren Quelle eine brauchbare Stufenangabe
+-- hat. Am Stufenende faellt damit fast alles weg: Raid- und Dungeonbosse
+-- fuehren oft keine verwertbare Stufe, und ein Item mit einer einzigen
+-- niedrigen Nebenquelle rutschte ohnehin aus dem Band.
+--
+-- Die importierte ItemDB kennt zu 11000 Items Slot, Qualitaet, Stufe und
+-- Werte - alles, was fuer einen Vorschlag noetig ist. Nur den Fundort
+-- kennt sie nicht. Solche Items kommen deshalb zusaetzlich in den Pool,
+-- werden als "ohne Fundort" markiert und hinter den verorteten
+-- einsortiert. Ein Vorschlag ohne Weg ist weniger wert als einer mit -
+-- aber mehr als gar keiner.
+------------------------------------------------------------------
+
+local importKey = nil
+
+function Cand:StartImportIndex()
+  if not BLL.ItemDB or not BLL.ItemDB.loaded or not BLL.ItemDB.data then
+    self:AnnouncePool()
     self:StartQuery()
+    return
+  end
+  importKey  = nil
+  self.state = "indexdb"
+end
+
+function Cand:ImportChunk()
+  local data = BLL.ItemDB.data
+  if not data then
+    self:AnnouncePool()
+    self:StartQuery()
+    return
+  end
+
+  local player = BLL.player or {}
+  local level  = player.level or 60
+  local class  = player.class
+
+  -- Obergrenze ist die Anforderungsstufe: was man nicht anlegen kann und
+  -- auch nicht bald anlegen kann, gehoert nicht auf die Liste.
+  local maxReq  = level + self:PlanAhead()
+  -- Untergrenze ueber das Itemlevel, weil die Anforderungsstufe bei
+  -- vielen Teilen 0 ist. Deutlich veraltete Stuecke bleiben damit draussen.
+  local minIlvl = math.max(1, level - LOOKBACK)
+
+  local pfItems = BLL.Sources.items
+  local processed = 0
+  local key, e = next(data, importKey)
+
+  while key and processed < CHUNK do
+    if type(e) == "table" and not self.pool[key] then
+      local req  = e.reqlevel or 0
+      local ilvl = e.ilvl or 0
+      if req <= maxReq and ilvl >= minIlvl and (e.quality or 0) >= 1
+         and BLL.ItemDB:MaskAllows(e.classmask, class) then
+        -- Als Poolstufe die Anforderungsstufe nehmen, ersatzweise das
+        -- Itemlevel. Sie dient nur der Anzeige, gefiltert wurde schon.
+        self.pool[key] = (req > 0) and req or ilvl
+        self.poolSize  = self.poolSize + 1
+        -- Nur wenn pfQuest das Item ueberhaupt nicht fuehrt, fehlt der
+        -- Fundort wirklich. Kennt pfQuest es und lag nur die Stufe
+        -- daneben, sind die Quellen weiterhin abrufbar.
+        if not (pfItems and pfItems[key]) then
+          self.fromImport[key] = 1
+          self.importCount = self.importCount + 1
+        end
+      end
+    end
+    importKey = key
+    key, e = next(data, importKey)
+    processed = processed + 1
+  end
+
+  if not key then
+    self:AnnouncePool()
+    self:StartQuery()
+  end
+end
+
+function Cand:AnnouncePool()
+  if (self.importCount or 0) > 0 then
+    BLL:Print(string.format(L["CAND_FOUND_MIX"], self.poolSize,
+      self.pfqCount or 0, self.importCount))
+  else
+    BLL:Print(string.format(L["CAND_FOUND"], self.poolSize))
   end
 end
 
@@ -494,9 +632,7 @@ function Cand:StartQuery()
   -- Erst aus dem Import bedienen, dann erst den Server fragen.
   local skipped, needStats = self:PreloadFromItemDB()
   if skipped > 0 or needStats > 0 then
-    BLL:Print(string.format("Import ausgewertet: %d Items aussortiert "
-      .. "(falscher Slot, falsche Ruestungsart oder Stufe zu hoch).",
-      skipped))
+    BLL:Print(string.format(L["CAND_IMPORT"], skipped))
   end
 
   for itemID in pairs(self.pool) do
@@ -511,15 +647,14 @@ function Cand:StartQuery()
   local total = table.getn(queue)
   if total == 0 then
     self.state = "ready"
-    BLL:Print("Alle Itemdaten bereits im Cache. Fertig.")
+    BLL:Print(L["CAND_CACHED"])
     if BLL.UI and BLL.UI.frame and BLL.UI.frame:IsVisible() then BLL.UI:Refresh() end
     return
   end
 
   self.state = "requesting"
   local rate = (BananaLootlineDB and BananaLootlineDB.queryRate) or 8
-  BLL:Print(string.format("%d unbekannte Items, frage sie an (ca. %d Sekunden). "
-    .. "Laeuft im Hintergrund, /bll stop bricht ab.", total, math.ceil(total / rate)))
+  BLL:Print(string.format(L["CAND_REQUEST"], total, math.ceil(total / rate)))
 end
 
 -- Daten eines Items uebernehmen. true = erledigt.
@@ -592,7 +727,7 @@ function Cand:CollectTick()
     queue = pending
     queueIndex = 1
     self.state = "requesting"
-    BLL:Print(string.format("%d Items noch offen, zweite Runde.", left))
+    BLL:Print(string.format(L["CAND_ROUND2"], left))
     return
   end
 
@@ -603,40 +738,35 @@ function Cand:CollectTick()
   end
 
   self.state = "ready"
-  BLL:Print(string.format("Fertig: %d Items eingelesen%s.",
-    resolved, (left > 0) and (", " .. left .. " nicht auffindbar") or ""))
+  BLL:Print(string.format(L["CAND_DONE"], resolved,
+    (left > 0) and string.format(L["CAND_MISSING"], left) or ""))
   if BLL.UI and BLL.UI.frame and BLL.UI.frame:IsVisible() then BLL.UI:Refresh() end
 end
 
 function Cand:Stop()
   if self.state == "idle" or self.state == "ready" then
-    BLL:Print("Es laeuft gerade nichts.")
+    BLL:Print(L["CAND_IDLE"])
     return
   end
   self.state = "ready"
-  BLL:Print(string.format("Abgebrochen. %d Items sind gespeichert und "
-    .. "bleiben erhalten.", resolved))
+  BLL:Print(string.format(L["CAND_ABORTED"], resolved))
 end
 
+-- Es gab hier zwei Definitionen von Progress(). Die zweite ueberschrieb
+-- die erste und kannte nur den Zustand "querying", den es nicht gibt -
+-- waehrend des Abfragens und Einsammelns zeigte das Fenster deshalb gar
+-- keinen Fortschritt an. Geblieben ist die Fassung, die alle vier
+-- tatsaechlichen Zustaende abdeckt.
 function Cand:Progress()
   if self.state == "indexing" then
-    return "Durchsuche Datenbank ..."
+    return L["PROG_INDEX"]
   elseif self.state == "requesting" then
-    return string.format("Frage Items an: %d/%d (Runde %d)",
+    return string.format(L["PROG_REQUEST"],
       queueIndex - 1, table.getn(queue), round)
   elseif self.state == "waiting" then
-    return string.format("Warte auf Serverantworten (%.0fs)", waitTimer)
+    return string.format(L["PROG_WAIT"], waitTimer)
   elseif self.state == "collecting" then
-    return "Werte Antworten aus ..."
-  end
-  return nil
-end
-
-function Cand:Progress()
-  if self.state == "indexing" then
-    return "Durchsuche Datenbank ..."
-  elseif self.state == "querying" then
-    return string.format("Hole Itemdaten: %d/%d", queueIndex, table.getn(queue))
+    return L["PROG_COLLECT"]
   end
   return nil
 end
@@ -713,6 +843,7 @@ function Cand:GetUpgrades(slotKey, maxResults)
   if equipped then
     baseScore = BLL.Weights:Score(equipped.stats, isWeapon)
 
+
     local eqEntry = equipped.id and cache[equipped.id]
     if eqEntry and eqEntry.use then
       baseScore = baseScore + BLL.Weights:UseEffectScore(eqEntry.use)
@@ -730,6 +861,32 @@ function Cand:GetUpgrades(slotKey, maxResults)
         end
       end
     end
+  end
+
+  ----------------------------------------------------------------
+  -- Sicherheitsabstand bei unbeziffertem Effekt
+  --
+  -- Der Scanner liest Werte aus dem Tooltip. Ein Proc-Effekt steht dort
+  -- als Satz, nicht als Zahl: "2% Chance bei Treffer, einen
+  -- zusaetzlichen Angriff auszufuehren". Fuer die Bewertung ist so ein
+  -- Teil deshalb null Punkte wert - obwohl es stark sein kann.
+  --
+  -- Ohne Gegenmassnahme gewinnt jedes beliebige Teil mit vier Ausdauer
+  -- gegen die Hand der Gerechtigkeit, und das Addon raet dem Spieler,
+  -- ein gutes Stueck gegen ein schlechtes zu tauschen.
+  --
+  -- Also: traegt der Spieler so ein Teil, muss ein Kandidat deutlich
+  -- vorne liegen statt knapp. Was nicht deutlich vorne liegt, ist keine
+  -- gesicherte Verbesserung und wird auch nicht als eine ausgegeben.
+  --
+  -- Die Anstecknadel der Argentumdaemmerung ist davon NICHT betroffen:
+  -- ihr Text nennt keinen Kampfeffekt, sie bleibt bei null Punkten, und
+  -- jedes Teil mit einem einzigen Wert schlaegt sie weiterhin.
+  ----------------------------------------------------------------
+  local unscoredEquip = equipped and equipped.unscored
+  local margin = 0
+  if unscoredEquip then
+    margin = UNSCORED_FLAT + baseScore * UNSCORED_SHARE
   end
 
   local out = {}
@@ -822,7 +979,7 @@ function Cand:GetUpgrades(slotKey, maxResults)
         end
 
         local score = statScore + useScore + setScore - offHandLoss
-        if score > baseScore then
+        if score > baseScore + margin then
           -- Tatsaechliche Wertaenderung gegenueber dem angelegten Teil.
           -- Der Punktevorsprung allein sagt nicht, WAS sich aendert -
           -- und verschweigt vor allem, was man verliert.
@@ -837,6 +994,11 @@ function Cand:GetUpgrades(slotKey, maxResults)
           end
           table.insert(out, {
             id        = itemID,
+            fromImport = self.fromImport and self.fromImport[itemID] or nil,
+            -- Der Vergleich lief gegen ein Teil, dessen Wert nicht
+            -- vollstaendig bezifferbar war. Die UI weist das aus, damit
+            -- der Vorsprung nicht genauer wirkt, als er ist.
+            incomplete = unscoredEquip and true or nil,
             locked    = (reqEff and reqEff > level) or nil,
             twoHand   = twoHand,
             offHandLoss = (offHandLoss > 0) and offHandLoss or nil,
@@ -862,7 +1024,17 @@ function Cand:GetUpgrades(slotKey, maxResults)
     end
   end
 
-  table.sort(out, function(a, b) return a.gain > b.gain end)
+  -- Items mit Fundort zuerst, danach erst die aus dem Import. Ein
+  -- Vorschlag, zu dem ein Weg gehoert, ist brauchbarer als einer ohne -
+  -- auch wenn der ohne ein paar Punkte mehr braechte. Innerhalb beider
+  -- Gruppen entscheidet weiterhin der Zuwachs.
+  table.sort(out, function(a, b)
+    local ai = a.fromImport and 1 or 0
+    local bi = b.fromImport and 1 or 0
+    if ai ~= bi then return ai < bi end
+    if a.gain == b.gain then return a.id < b.id end
+    return a.gain > b.gain
+  end)
 
   -- Nur die besten behalten und erst dafuer die Quellen aufloesen,
   -- weil die Quellensuche pro Item spuerbar kostet.
@@ -870,6 +1042,11 @@ function Cand:GetUpgrades(slotKey, maxResults)
   for i = 1, math.min(maxResults, table.getn(out)) do
     local u = out[i]
     u.sources = BLL.Sources:GetItemSources(u.id)
+    -- Erst jetzt steht fest, ob wirklich kein Fundort da ist: pfQuest
+    -- kann ein Item fuehren und trotzdem keine erreichbare Quelle haben.
+    if not u.sources or table.getn(u.sources) == 0 then
+      u.noSource = true
+    end
     table.insert(trimmed, u)
   end
 
@@ -1111,11 +1288,22 @@ end
 -- Bequemer Einstieg
 ------------------------------------------------------------------
 
-function Cand:Run(span)
-  span = span or 6
+-- Das Stufenband, das die Suche abdeckt. Ohne Argument entscheidet die
+-- gespeicherte Vorausplanung - das ist der Punkt, an dem /bll ahead
+-- ueberhaupt erst auf die Suche wirkt.
+function Cand:Band(span)
+  span = span or self:PlanAhead()
   local level = (BLL.player and BLL.player.level) or 60
-  local minLvl = math.max(1, level - math.floor(span / 2))
-  local maxLvl = math.min(63, level + span)
+  local minLvl = math.max(1, level - LOOKBACK)
+  local maxLvl = math.min(MAX_SOURCE_LEVEL, level + span)
+  if maxLvl < minLvl then maxLvl = minLvl end
+  return minLvl, maxLvl
+end
+
+-- span setzt die Vorausplanung fuer diesen einen Lauf ausser Kraft,
+-- gespeichert wird sie dadurch nicht.
+function Cand:Run(span)
+  local minLvl, maxLvl = self:Band(span)
   return self:StartIndex(minLvl, maxLvl)
 end
 
@@ -1137,6 +1325,9 @@ driver:SetScript("OnUpdate", function()
 
   if Cand.state == "indexing" then
     Cand:IndexChunk()
+
+  elseif Cand.state == "indexdb" then
+    Cand:ImportChunk()
 
   elseif Cand.state == "requesting" then
     Cand:RequestTick(elapsed)
