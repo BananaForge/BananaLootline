@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.19.3
+- Die Prüfung auf Ruf- und Rangbedingungen greift jetzt dort, wo sie etwas bewirkt. Sie liest den Tooltip, und den sah nur, was das Addon beim Server anfragen musste — bei einem Stufe-15-Jäger 22 von 955 verwertbaren Kandidaten, also zwei Prozent. Geprüft wird jetzt jeder Gegenstand, der tatsächlich in der Liste landet; kennt der Client ihn, kostet das keine einzige Serveranfrage.
+- Ein gefiltertes Teil lässt die Liste nicht mehr schrumpfen: die nachfolgenden rücken auf.
+- Drei Diagnosewerkzeuge unter `tools/`: `diag_full.lua` prüft alle Ausrüstungsplätze gegen die Itemdatenbank, `diag_gaps.lua` misst Lücken in der Datenlage, `diag_perf.lua` die Laufzeit. Aufruf vom Addonstamm, etwa `lua5.1 tools/diag_full.lua 60 WARRIOR`.
+- Geprüft über 24 Kombinationen aus Stufe und Klasse: keine Vorschläge über der Stufengrenze, keine fremde Klasse, kein falscher Ausrüstungsplatz.
+
 ## 0.19.2
 - Die Anforderungsstufe wird zwischen Itemcache und Itemdatenbank abgeglichen; bei Uneinigkeit gilt die höhere Angabe. „Outrider's Bow" erschien bei einem Stufe-15-Jäger mit dem Vermerk „ab 18", obwohl Tooltip und Import übereinstimmend Stufe 60 nennen — im gespeicherten Cache stand noch ein alter Wert, und Cache-Einträge werden nicht neu bewertet, solange ihre Version passt.
 - Gegenstände mit Ruf- oder Rangbedingung erscheinen nicht mehr in den Vorschlägen. Beim PvP-Quartiermeister in den Barrens steht ein Bogen ab Stufe 18 — zu holen ist er aber erst mit dem passenden Ehrenrang. Das Addon kannte nur die Stufenangabe und setzte solche Teile ganz nach oben. Die Bedingung wird jetzt beim Auslesen des Tooltips erkannt und dauerhaft vermerkt, weil der Client den Tooltip später wieder vergisst.

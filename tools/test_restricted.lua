@@ -117,6 +117,12 @@ check(not (meta and meta.unscored),
 -- 4. Filterung in den Vorschlaegen
 ------------------------------------------------------------------
 
+-- Ab hier darf der Tooltip nichts mehr liefern: GetUpgrades fragt den
+-- Scanner fuer jeden angezeigten Kandidaten, und die Attrappe wuerde
+-- sonst jedem Teil die zuletzt gesetzten Zeilen unterschieben.
+currentLines = {}
+Scanner:ClearCache()
+
 BananaLootlineDB = { planAhead = 6, itemcache = {}, showLocked = nil }
 BLL.player = { class = "HUNTER", level = 15 }
 BLL.Weights = {
@@ -156,5 +162,33 @@ ups = Cand:GetUpgrades("RangedSlot", 5)
 found = {}
 for i = 1, table.getn(ups or {}) do found[ups[i].id] = true end
 check(found[19558] ~= nil, "mit /bll locked wieder sichtbar")
+
+------------------------------------------------------------------
+-- 5. Gefiltertes Teil laesst die Liste nicht schrumpfen
+--
+-- Der beste Kandidat ist gesperrt. Wird er einfach weggelassen, hat die
+-- Liste nur zwei statt drei Eintraege - obwohl genug Kandidaten da sind.
+-- Die schlechteren muessen nachruecken.
+------------------------------------------------------------------
+
+BananaLootlineDB.showLocked = nil
+BananaLootlineDB.itemcache = {
+  [901] = { e = "INVTYPE_RANGED", st = { AGI = 50 }, r = 16, q = 4,
+            n = "Bester, aber gesperrt", ic = 2, sc = 2, lock = "Requires: Sergeant" },
+  [902] = { e = "INVTYPE_RANGED", st = { AGI = 40 }, r = 16, q = 3, n = "Zweitbester", ic = 2, sc = 2 },
+  [903] = { e = "INVTYPE_RANGED", st = { AGI = 30 }, r = 16, q = 3, n = "Dritter", ic = 2, sc = 2 },
+  [904] = { e = "INVTYPE_RANGED", st = { AGI = 20 }, r = 16, q = 2, n = "Vierter", ic = 2, sc = 2 },
+  [905] = { e = "INVTYPE_RANGED", st = { AGI = 10 }, r = 16, q = 2, n = "Fuenfter", ic = 2, sc = 2 },
+}
+Cand.pool = { [901] = 16, [902] = 16, [903] = 16, [904] = 16, [905] = 16 }
+
+ups = Cand:GetUpgrades("RangedSlot", 3)
+check(table.getn(ups or {}) == 3,
+  "drei Vorschlaege trotz gesperrtem Spitzenreiter, waren "
+  .. table.getn(ups or {}))
+if table.getn(ups or {}) == 3 then
+  check(ups[1].id == 902 and ups[2].id == 903 and ups[3].id == 904,
+    "die naechsten ruecken der Reihe nach nach")
+end
 
 print(ok and "ALLE TESTS OK" or "TESTS FEHLGESCHLAGEN")

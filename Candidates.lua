@@ -1114,16 +1114,49 @@ function Cand:GetUpgrades(slotKey, maxResults)
 
   -- Nur die besten behalten und erst dafuer die Quellen aufloesen,
   -- weil die Quellensuche pro Item spuerbar kostet.
+  -- Zugangsbedingung nachtragen und gesperrte Teile ueberspringen.
+  --
+  -- Die Bedingung steht im Tooltip, und den liest das Addon nur fuer
+  -- Kandidaten, die es beim Server anfragen musste. Alles, was der
+  -- Import mit Werten liefert, kommt nie an einem Tooltip vorbei - bei
+  -- einem Stufe-15-Jaeger sind das 933 von 955 verwertbaren Kandidaten.
+  -- Die Pruefung beim Einlesen erreichte so nur zwei Prozent.
+  --
+  -- Hier ist die Liste bereits sortiert, es geht also nur noch um eine
+  -- Handvoll Teile. Kennt der Client eines davon, liefert der Scan die
+  -- Bedingung ohne eine einzige Serveranfrage; kennt er es nicht,
+  -- bleibt es drin. Das Ergebnis wandert in den Cache und gilt ab dann.
+  --
+  -- Gesperrte Teile werden uebersprungen, die naechsten ruecken nach -
+  -- sonst bliebe die Liste kuerzer als gewuenscht.
+  local showLocked = BananaLootlineDB and BananaLootlineDB.showLocked
   local trimmed = {}
-  for i = 1, math.min(maxResults, table.getn(out)) do
+  local taken, i, n = 0, 1, table.getn(out)
+
+  while taken < maxResults and i <= n do
     local u = out[i]
-    u.sources = BLL.Sources:GetItemSources(u.id)
-    -- Erst jetzt steht fest, ob wirklich kein Fundort da ist: pfQuest
-    -- kann ein Item fuehren und trotzdem keine erreichbare Quelle haben.
-    if not u.sources or table.getn(u.sources) == 0 then
-      u.noSource = true
+    i = i + 1
+
+    local entry = cache[u.id]
+    if entry and entry.lock == nil and BLL.Scanner then
+      local _, meta = BLL.Scanner:GetStats(u.id)
+      if meta and meta.restricted then entry.lock = meta.restricted end
     end
-    table.insert(trimmed, u)
+
+    local lock = entry and entry.lock or nil
+    if lock and not showLocked then
+      -- uebersprungen: nicht frei erhaeltlich
+    else
+      u.lockedBy = lock
+      u.sources = BLL.Sources:GetItemSources(u.id)
+      -- Erst jetzt steht fest, ob wirklich kein Fundort da ist: pfQuest
+      -- kann ein Item fuehren und trotzdem keine erreichbare Quelle haben.
+      if not u.sources or table.getn(u.sources) == 0 then
+        u.noSource = true
+      end
+      table.insert(trimmed, u)
+      taken = taken + 1
+    end
   end
 
   return trimmed, baseScore

@@ -2043,6 +2043,11 @@ function UI:ShowDetail(slotKey)
     if u.incomplete then
       lock = lock .. "|cffff8800" .. BLL.L["UNSCORED_SHORT"] .. "|r  "
     end
+    -- Nur sichtbar, solange /bll locked eingeschaltet ist: sonst stehen
+    -- diese Teile gar nicht in der Liste.
+    if u.lockedBy then
+      lock = lock .. "|cffff0000" .. BLL.L["LOCKED_ITEM"] .. "|r  "
+    end
     if u.sources and table.getn(u.sources) > 0 then
       local src = u.sources[1]
       local pre, post = lock .. "|cffcccccc", "|r"
