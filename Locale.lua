@@ -165,6 +165,18 @@ local L_enUS = {
   -- ---- Herkunft eines Kandidaten ----
   ["NO_LOCATION_YET"] = "no known location",
   ["LOCKED_ITEM"]     = "not freely available",
+  ["CAT_DUNGEON"]     = "DUNGEON",
+  ["CAT_RAID"]        = "RAID",
+  ["CAT_QUEST"]       = "QUEST",
+  ["CAT_VENDOR"]      = "VENDOR",
+  ["CAT_OBJECT"]      = "OBJECT",
+  ["CAT_WORLDBOSS"]   = "WORLD BOSS",
+  ["CAT_PVP"]         = "PVP",
+  ["CAT_WORLD"]       = "WORLD",
+  ["SHOW_VENDORS"]    = "Show vendors",
+  ["VENDOR_TOOLTIP"]  = "Vendor goods are a sure thing and would otherwise push every dungeon off the list. Switch them on when you want to go shopping.",
+  ["NO_ROUTE"]        = "No route yet. Click \"Find upgrades\" below.",
+  ["LOOT_QUESTS"]     = "Quests",
   ["LOCKED_STATE"]    = "Items with a reputation or rank requirement: %s",
   ["LOCKED_SHOWN"]    = "are shown",
   ["LOCKED_HIDDEN"]   = "are hidden",
@@ -308,6 +320,18 @@ local L_deDE = {
   -- ---- Herkunft eines Kandidaten ----
   ["NO_LOCATION_YET"] = "kein bekannter Fundort",
   ["LOCKED_ITEM"]     = "nicht frei erhaeltlich",
+  ["CAT_DUNGEON"]     = "DUNGEON",
+  ["CAT_RAID"]        = "RAID",
+  ["CAT_QUEST"]       = "QUEST",
+  ["CAT_VENDOR"]      = "HAENDLER",
+  ["CAT_OBJECT"]      = "OBJEKT",
+  ["CAT_WORLDBOSS"]   = "WELTBOSS",
+  ["CAT_PVP"]         = "PVP",
+  ["CAT_WORLD"]       = "WELT",
+  ["SHOW_VENDORS"]    = "Haendler zeigen",
+  ["VENDOR_TOOLTIP"]  = "Haendlerware ist sicher zu bekommen und draengt sonst jeden Dungeon aus der Liste. Einschalten, wenn du einkaufen gehen willst.",
+  ["NO_ROUTE"]        = "Noch kein Wegplan. Unten auf \"Upgrades suchen\" klicken.",
+  ["LOOT_QUESTS"]     = "Quests",
   ["LOCKED_STATE"]    = "Gegenstaende mit Ruf- oder Rangbedingung: %s",
   ["LOCKED_SHOWN"]    = "werden angezeigt",
   ["LOCKED_HIDDEN"]   = "werden ausgeblendet",
@@ -426,20 +450,20 @@ local P_enUS = {
 
 local P_deDE = {
   -- Grundwerte
-  { "STR",         "^%+(%d+) St[aä]rke"          },
+  { "STR",         "^%+(%d+) St.-rke"          },
   { "AGI",         "^%+(%d+) Beweglichkeit"      },
   { "STA",         "^%+(%d+) Ausdauer"           },
   { "INT",         "^%+(%d+) Intelligenz"        },
   { "SPI",         "^%+(%d+) Willenskraft"       },
 
-  { "STR",         "^%-(%d+) St[aä]rke",         -1 },
+  { "STR",         "^%-(%d+) St.-rke",         -1 },
   { "AGI",         "^%-(%d+) Beweglichkeit",     -1 },
   { "STA",         "^%-(%d+) Ausdauer",          -1 },
   { "INT",         "^%-(%d+) Intelligenz",       -1 },
   { "SPI",         "^%-(%d+) Willenskraft",      -1 },
 
   -- Ruestung / Block
-  { "ARMOR",       "^(%d+) R[uü]stung"           },
+  { "ARMOR",       "^(%d+) R.-stung"           },
   { "BLOCKVALUE",  "^(%d+) Block"                },
 
   -- Widerstaende

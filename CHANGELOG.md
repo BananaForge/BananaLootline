@@ -2,6 +2,13 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.20.0
+- **Stärke und Rüstung wurden auf deutschen Clients nie erkannt.** Die Muster `St[aä]rke` und `R[uü]stung` sehen nach einer Zeichenklasse mit zwei Buchstaben aus, sind aber eine mit drei Bytes — das Umlautzeichen steht in der Datei als UTF-8. Die Klasse passt auf genau eines dieser Bytes, ein echtes „ä" im Tooltip besteht aus zweien. Für Krieger und Paladine war damit jede Bewertung wertlos. Die Muster greifen jetzt unabhängig von der Zeichenkodierung.
+- Der Wegplan zeigt Händlerware nur noch auf Wunsch, über einen Haken oben rechts in der Liste. Händlerware gilt als sicher und bekommt den vollen Zuwachs angerechnet, während ein Dungeondrop mit seiner Dropchance multipliziert wird — ungefiltert stand der Händler damit immer oben und verdrängte jedes Ziel, zu dem man tatsächlich hingehen würde.
+- Die Gruppe „kein Fundort" entfällt. Sie beantwortete die Frage „wohin als nächstes" nicht. In der Einzelansicht erscheinen diese Teile weiterhin.
+- Die Herkunftsetiketten folgen der Anzeigesprache. DUNGEON, VENDOR, WORLD und die übrigen standen im englischen Fenster weiterhin auf Deutsch.
+- Fehler behoben: Das Mausrad zeichnete in der Einzelansicht die zuletzt aufgebaute Lootline über das Fenster. Die Zeilen waren nur versteckt, ihre Daten standen noch bereit, und der Radlauf rief die Listenausgabe ohne Prüfung auf.
+
 ## 0.19.3
 - Die Prüfung auf Ruf- und Rangbedingungen greift jetzt dort, wo sie etwas bewirkt. Sie liest den Tooltip, und den sah nur, was das Addon beim Server anfragen musste — bei einem Stufe-15-Jäger 22 von 955 verwertbaren Kandidaten, also zwei Prozent. Geprüft wird jetzt jeder Gegenstand, der tatsächlich in der Liste landet; kennt der Client ihn, kostet das keine einzige Serveranfrage.
 - Ein gefiltertes Teil lässt die Liste nicht mehr schrumpfen: die nachfolgenden rücken auf.

@@ -1282,27 +1282,38 @@ function Cand:GetLootline(maxPerSlot)
       -- gehoert nicht in einen Wegplan: man kann es nicht bekommen.
       local hasSource = item.sources and table.getn(item.sources) > 0
 
+      local zone, sourceName, chance, stype, questLevel, questID
+      if item.sources and table.getn(item.sources) > 0 then
+        local best = item.sources[1]
+        zone = best.zone
+        sourceName = best.name
+        chance = best.chance
+        stype = best.stype
+        questLevel = best.questLevel
+        if stype == "Q" then questID = best.id end
+      end
+
+      -- Haendlerware nur auf Wunsch. Sie ist sicher zu bekommen und
+      -- bekommt deshalb den vollen Zuwachs angerechnet, waehrend ein
+      -- Dungeondrop mit seiner Chance multipliziert wird. In einer
+      -- gemeinsamen Liste steht der Haendler damit immer oben und
+      -- verdraengt jedes Ziel, zu dem man tatsaechlich hingehen wuerde.
+      if stype == "V" and not (BananaLootlineDB and BananaLootlineDB.showVendors) then
+        hasSource = false
+      end
+
+      -- Ohne Ort kein Wegplan. Eine Sammelgruppe "kein Fundort"
+      -- beantwortet die Frage "wohin soll ich gehen" nicht und stand
+      -- nur im Weg. Quests bleiben, auch wenn ihr Geber unbekannt ist -
+      -- "Quests" ist eine brauchbare Auskunft.
+      if not zone and stype ~= "Q" then
+        hasSource = false
+      end
+
       if not seenItem[item.id] and hasSource then
         seenItem[item.id] = true
 
-        local zone, sourceName, chance, stype, questLevel, questID
-        if item.sources and table.getn(item.sources) > 0 then
-          local best = item.sources[1]
-          zone = best.zone
-          sourceName = best.name
-          chance = best.chance
-          stype = best.stype
-          questLevel = best.questLevel
-          if stype == "Q" then questID = best.id end
-        end
-        local key = zone or (BLL.locale == "deDE" and "Ohne Ortsangabe" or "No location")
-
-        -- Quests ohne ermittelbaren Ort nicht in denselben Topf wie
-        -- ortlose Weltdrops werfen: "Quests" ist eine brauchbare
-        -- Auskunft, "Ohne Ortsangabe" ist keine.
-        if not zone and stype == "Q" then
-          key = (BLL.locale == "deDE") and "Quests" or "Quests"
-        end
+        local key = zone or "Quests"
 
         if not groups[key] then
           local info = self:ZoneInfo(zone)

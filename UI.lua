@@ -214,15 +214,20 @@ local PROFESSION_ICON = {
 
 -- Etiketten fuer die Herkunft, damit man Dungeon von Weltdrop
 -- unterscheidet, ohne die Zone kennen zu muessen.
+--
+-- Die Schluessel bleiben deutsch, weil sie intern auch in den
+-- gespeicherten Einstellungen und in /bll cat stehen. Angezeigt wird,
+-- was die Sprachtabelle liefert - vorher standen hier feste deutsche
+-- Woerter, die auch im englischen Fenster auftauchten.
 local CATEGORY_LABEL = {
-  DUNGEON  = { "DUNGEON",  "ff4a90d9" },
-  RAID     = { "RAID",     "ffa335ee" },
-  QUEST    = { "QUEST",    "ffffd100" },
-  HAENDLER = { "HAENDLER", "ff40c040" },
-  OBJEKT   = { "OBJEKT",   "ff909090" },
-  WELTBOSS = { "WELTBOSS", "ffff8000" },
-  SCHLACHTFELD = { "PVP",  "ffc41f3b" },
-  WELT     = { "WELT",     "ff909090" },
+  DUNGEON      = { "CAT_DUNGEON",   "ff4a90d9" },
+  RAID         = { "CAT_RAID",      "ffa335ee" },
+  QUEST        = { "CAT_QUEST",     "ffffd100" },
+  HAENDLER     = { "CAT_VENDOR",    "ff40c040" },
+  OBJEKT       = { "CAT_OBJECT",    "ff909090" },
+  WELTBOSS     = { "CAT_WORLDBOSS", "ffff8000" },
+  SCHLACHTFELD = { "CAT_PVP",       "ffc41f3b" },
+  WELT         = { "CAT_WORLD",     "ff909090" },
 }
 
 local function SlotBackdrop(slotKey)
@@ -1140,6 +1145,39 @@ function UI:BuildDetailPane()
   pane.header = header
 
   ----------------------------------------------------------------
+  -- Haken "Haendler zeigen", rechts neben der Ueberschrift.
+  --
+  -- Haendlerware ist sicher zu bekommen und bekommt deshalb den vollen
+  -- Zuwachs angerechnet, waehrend ein Dungeondrop mit seiner Chance
+  -- multipliziert wird. Ungefiltert steht der Haendler damit immer
+  -- oben. Wer einkaufen gehen will, schaltet ihn dazu.
+  ----------------------------------------------------------------
+  local vend = CreateFrame("CheckButton", "BananaLootlineVendorCheck", pane,
+                           "UICheckButtonTemplate")
+  vend:SetWidth(22); vend:SetHeight(22)
+  vend:SetPoint("TOPRIGHT", pane, "TOPRIGHT", -10, -8)
+  vend:Hide()
+
+  local vendText = pane:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  vendText:SetPoint("RIGHT", vend, "LEFT", -2, 0)
+  SetFontSize(vendText, 11)
+  vendText:SetTextColor(0.7, 0.7, 0.7)
+  vend.label = vendText
+
+  vend:SetScript("OnClick", function()
+    BananaLootlineDB.showVendors = this:GetChecked() and true or nil
+    BLL.UI:Refresh()
+  end)
+  vend:SetScript("OnEnter", function()
+    GameTooltip:SetOwner(this, "ANCHOR_LEFT")
+    GameTooltip:SetText(BLL.L["SHOW_VENDORS"])
+    GameTooltip:AddLine(BLL.L["VENDOR_TOOLTIP"], 0.8, 0.8, 0.8, 1)
+    GameTooltip:Show()
+  end)
+  vend:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  pane.vendorCheck = vend
+
+  ----------------------------------------------------------------
   -- Slotansicht: drei Bereiche untereinander
   --   [Angelegt]   Icon, Name gross, Werte klein
   --   [Upgrades]   je Vorschlag: Icon, Name gross, Wertaenderung und
@@ -1350,6 +1388,11 @@ function UI:BuildDetailPane()
   pane.measure = measure
 
   local function Wheel()
+    -- Ohne aktive Listenansicht gibt es nichts zu scrollen. Fehlte diese
+    -- Pruefung, zeichnete das Mausrad in der Einzelansicht die zuletzt
+    -- aufgebaute Lootline wieder ueber das Fenster - die Zeilen waren
+    -- nur versteckt, ihre Daten standen noch in pane.list.
+    if not pane.listView then return end
     local d = arg1 or 0
     pane.offset = (pane.offset or 1) - d * 2
     BLL.UI:RenderList()
@@ -1524,6 +1567,19 @@ function UI:ResetList(view)
   if pane.listView ~= view then pane.offset = 1 end
   pane.listView = view
   pane.list = {}
+
+  -- Der Haendlerhaken gehoert nur zum Wegplan.
+  if pane.vendorCheck then
+    if view == "lootline" then
+      pane.vendorCheck.label:SetText(BLL.L["SHOW_VENDORS"])
+      pane.vendorCheck:SetChecked(BananaLootlineDB
+        and BananaLootlineDB.showVendors or false)
+      pane.vendorCheck:Show()
+    else
+      pane.vendorCheck:Hide()
+      pane.vendorCheck.label:SetText("")
+    end
+  end
 end
 
 -- Eine Zeile aus ihrem Listeneintrag befuellen
@@ -1648,8 +1704,7 @@ function UI:ShowLootline()
   end
 
   if not BLL.Candidates.pool then
-    pane.header:SetText(BLL.locale == "deDE"
-      and "Noch keine Kandidaten" or "No candidates yet")
+    pane.header:SetText(BLL.L["NO_ROUTE"])
     pane.header:SetTextColor(0.6, 0.6, 0.6)
     self:RenderList()
     return
@@ -1686,7 +1741,7 @@ function UI:ShowLootline()
     -- Klammern. Reicht der Platz nicht, wird nur der Zonenname gekuerzt.
     table.insert(list, {
       head = true, sep = (g > 1), h = H_HEAD, step = S_HEAD,
-      pre  = "|c" .. cat[2] .. "[" .. cat[1] .. "]|r |cffffffff",
+      pre  = "|c" .. cat[2] .. "[" .. BLL.L[cat[1]] .. "]|r |cffffffff",
       core = grp.zone,
       post = "|r" .. lvl .. "  |cff888888(" .. table.getn(grp.items) .. ")|r",
       -- Erwarteter Zuwachs pro Besuch; kleine Werte mit Nachkommastelle,
@@ -1872,7 +1927,15 @@ function UI:ShowDetail(slotKey)
     pane.llRows[i]:Hide()
   end
   if pane.scroll then pane.scroll:Hide() end
+  if pane.vendorCheck then
+    pane.vendorCheck:Hide()
+    pane.vendorCheck.label:SetText("")
+  end
   pane.listView = nil
+  -- Auch die Daten wegraeumen, nicht nur die Zeilen verstecken. Sonst
+  -- kann jeder spaetere RenderList-Aufruf die alte Liste wieder
+  -- hervorholen.
+  pane.list = {}
   pane.header:SetText("")
   sv:Show()
 
