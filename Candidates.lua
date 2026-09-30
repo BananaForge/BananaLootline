@@ -43,7 +43,7 @@ local L = BLL.L
 --    Eintraege kennen das Feld nicht und wuerden solche Teile weiter
 --    vorschlagen, also muessen sie neu eingelesen werden.
 -- Aeltere Eintraege werden verworfen und neu eingelesen.
-Cand.CACHE_VERSION = 5
+Cand.CACHE_VERSION = 6
 
 Cand.pool     = nil     -- [itemID] = sourceLevel
 Cand.poolSize = 0
@@ -824,6 +824,50 @@ function Cand:PlanAhead()
   return n
 end
 
+------------------------------------------------------------------
+-- Zugangsbedingung aus AtlasLoot
+--
+-- AtlasLoot fuehrt in AtlasLoot_Data["AtlasLootSources"] zu ueber 7000
+-- Gegenstaenden einen Herkunftstext, darunter rund 240 mit Ruf- und 300
+-- mit Rangbedingung. Genau von dort stammt die Zeile
+-- "Warsong Gulch - Revered", die im Spiel am Tooltip haengt und im
+-- nachgebauten Scan-Tooltip fehlt - mit allen Addons ausser diesem
+-- abgeschaltet verschwand sie.
+--
+-- Direkt aus der Tabelle gelesen ist das erheblich verlaesslicher als
+-- aus dem Tooltip gefischt: es braucht kein Ueberfahren, keine
+-- Ladereihenfolge und keinen Zeitpunkt.
+--
+-- Erkannt wird ueber die Konstanten des Clients. AtlasLoot baut seine
+-- Texte aus FACTION_STANDING_LABEL6 bis 8 und RANK - dieselben Werte
+-- stehen in jeder Clientsprache bereit, eine eigene Wortliste waere
+-- nur eine zusaetzliche Fehlerquelle.
+------------------------------------------------------------------
+
+function Cand:AtlasRestriction(itemID)
+  if not itemID or not AtlasLoot_Data then return nil end
+  local src = AtlasLoot_Data["AtlasLootSources"]
+  if type(src) ~= "table" then return nil end
+
+  local txt = src[itemID]
+  if type(txt) ~= "string" or txt == "" then return nil end
+
+  local marks = {
+    FACTION_STANDING_LABEL5,   -- freundlich
+    FACTION_STANDING_LABEL6,   -- wohlwollend
+    FACTION_STANDING_LABEL7,   -- respektvoll
+    FACTION_STANDING_LABEL8,   -- ehrfuerchtig
+    RANK,                      -- PvP-Rang
+  }
+  for i = 1, table.getn(marks) do
+    local w = marks[i]
+    if type(w) == "string" and w ~= "" and string.find(txt, w, 1, true) then
+      return txt
+    end
+  end
+  return nil
+end
+
 -- Anforderungsstufe eines Kandidaten, aus beiden Quellen abgeglichen.
 --
 -- Der Itemcache ueberlebt Reloads und kann aus einer Sitzung stammen, in
@@ -1138,9 +1182,16 @@ function Cand:GetUpgrades(slotKey, maxResults)
     i = i + 1
 
     local entry = cache[u.id]
-    if entry and entry.lock == nil and BLL.Scanner then
-      local _, meta = BLL.Scanner:GetStats(u.id)
-      if meta and meta.restricted then entry.lock = meta.restricted end
+    if entry and entry.lock == nil then
+      -- Zuerst AtlasLoot: dort steht die Bedingung als Datensatz und
+      -- nicht als Text, den erst jemand ueberfahren muss.
+      local atlas = self:AtlasRestriction(u.id)
+      if atlas then
+        entry.lock = atlas
+      elseif BLL.Scanner then
+        local _, meta = BLL.Scanner:GetStats(u.id)
+        if meta and meta.restricted then entry.lock = meta.restricted end
+      end
     end
 
     local lock = entry and entry.lock or nil
@@ -1216,13 +1267,18 @@ function Cand:Category(zone, stype)
     if own then return own end
   end
 
-  if stype == "V" then return "HAENDLER" end
-  if stype == "Q" then return "QUEST" end
-
+  -- Der Ort entscheidet vor der Quellenart. Die Todesminen sind ein
+  -- Dungeon, ob man wegen einer Quest oder wegen eines Drops hingeht;
+  -- die Gruppe stand als [QUEST] da, weil die Questbelohnung das
+  -- gewichtigste Teil war. Die Stufenangabe daneben stammt ohnehin aus
+  -- derselben Tabelle.
   if key then
     local info = BananaLootlineZoneData[key]
     if info and info.c then return info.c end
   end
+
+  if stype == "V" then return "HAENDLER" end
+  if stype == "Q" then return "QUEST" end
 
   if stype == "O" or stype == "C" then return "OBJEKT" end
   return "WELT"
@@ -1245,6 +1301,27 @@ end
 -- Quest und Haendler: sicher. Ohne Angabe: als sicher behandeln statt
 -- auf null zu setzen - unbekannt ist nicht unmoeglich, und
 -- Unerreichbares filtert Sources bereits heraus.
+-- Untergrenze fuer den Wegplan.
+--
+-- Der Wegplan beantwortet "wohin als naechstes". Ein Drop mit 0,0045 %
+-- ist einer von 22000 und damit kein Ziel, zu dem man aufbricht. Genau
+-- solche Zeilen standen unter [WORLD] Sumpfland: "Ranger Bow", "Feet of
+-- the Lynx" und "Sentry Cloak", alle drei bei denselben drei Gegnern,
+-- alle drei mit 0,0045 %. Es sind Weltdrops, die von fast allem fallen.
+--
+-- Die Grenze liegt bei einem Tausendstel. Unterhalb davon liegen 12,5 %
+-- aller Gegnerquellen, oberhalb setzt die Verteilung mit 0,25 % wieder
+-- dicht ein - dazwischen ist eine Luecke, und die ist die Grenze.
+-- In der Einzelansicht bleiben diese Quellen sichtbar; sie sind nicht
+-- falsch, sie taugen nur nicht als Reiseziel.
+Cand.MIN_LOOTLINE_CHANCE = 0.1
+
+function Cand:LootlineChanceFloor()
+  local db = BananaLootlineDB
+  if db and db.minLootlineChance then return db.minLootlineChance end
+  return Cand.MIN_LOOTLINE_CHANCE
+end
+
 function Cand:ChanceFactor(stype, chance)
   if stype == "Q" or stype == "V" then return 1 end
   if not chance then return 1 end
@@ -1282,9 +1359,22 @@ function Cand:GetLootline(maxPerSlot)
       -- gehoert nicht in einen Wegplan: man kann es nicht bekommen.
       local hasSource = item.sources and table.getn(item.sources) > 0
 
+      -- Der Wegplan gruppiert nach Zone. Hat die beste Quelle keinen
+      -- Ort, eine schlechtere aber schon, dann ist die schlechtere hier
+      -- die brauchbare: ein Ziel mit halber Chance schlaegt eines, zu
+      -- dem niemand hinfindet. In der Einzelansicht bleibt es bei der
+      -- Reihenfolge nach Chance. Betrifft 301 Gegenstaende.
       local zone, sourceName, chance, stype, questLevel, questID
+      local elite, sourceLevel
       if item.sources and table.getn(item.sources) > 0 then
         local best = item.sources[1]
+        if not best.zone then
+          for i = 2, table.getn(item.sources) do
+            if item.sources[i].zone then best = item.sources[i]; break end
+          end
+        end
+        elite = best.elite
+        sourceLevel = best.level
         zone = best.zone
         sourceName = best.name
         chance = best.chance
@@ -1310,6 +1400,12 @@ function Cand:GetLootline(maxPerSlot)
         hasSource = false
       end
 
+      -- Zu unwahrscheinlich, um dafuer loszulaufen.
+      if stype ~= "Q" and stype ~= "V" and chance
+         and chance < self:LootlineChanceFloor() then
+        hasSource = false
+      end
+
       if not seenItem[item.id] and hasSource then
         seenItem[item.id] = true
 
@@ -1320,6 +1416,7 @@ function Cand:GetLootline(maxPerSlot)
           groups[key] = {
             zone     = key,
             category = self:Category(zone, stype),
+            catGain  = -1,
             lvlRange = info and info.lvl,
             minLevel = info and info.min,
             acronym  = info and info.acr,
@@ -1329,6 +1426,16 @@ function Cand:GetLootline(maxPerSlot)
         end
 
         local g = groups[key]
+
+        -- Die Beschriftung richtet sich nach dem gewichtigsten Teil der
+        -- Gruppe, nicht nach dem zuerst eingereihten. Sonst entscheidet
+        -- die Reihenfolge der Ruestungsplaetze darueber, ob ein Ort
+        -- [QUEST] oder [WORLD] heisst: das Barrens stand als [QUEST] da,
+        -- obwohl zwei seiner drei Teile von seltenen Elitegegnern fallen.
+        if item.gain and item.gain > (g.catGain or -1) then
+          g.catGain  = item.gain
+          g.category = self:Category(zone, stype)
+        end
         if questID then
           -- Nur den Teil des Zuwachses addieren, der ueber dem bisher
           -- besten Teil derselben Quest liegt. Die Summe je Quest ist
@@ -1367,6 +1474,13 @@ function Cand:GetLootline(maxPerSlot)
           isNew    = (BLL.Gear.equipped[slot.key] == nil),
           source   = sourceName,
           chance   = chance,
+          -- Elite und Bosse bedeuten Gruppe, Selten bedeutet warten.
+          -- "Forest Leather Gloves" fallen zu 1,6 % von Humar the
+          -- Pridelord - einem seltenen Elitegegner auf Stufe 23. Ohne
+          -- diese Angabe liest sich die Zeile wie ein normaler Drop,
+          -- und ein Stufe-15-Jaeger laeuft allein los.
+          elite       = elite,
+          sourceLevel = sourceLevel,
           setInfo  = item.setInfo,
           questID  = questID,
         }

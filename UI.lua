@@ -1597,6 +1597,12 @@ function UI:FillRow(row, e)
   if e.itemID and not tex then
     local _, _, _, _, _, _, _, _, t = GetItemInfo(e.itemID)
     tex = t
+    if not tex then
+      -- Der Client kennt die Textur nur fuer Gegenstaende, die er schon
+      -- einmal gesehen hat. Gerade die, die man noch nicht hat, standen
+      -- deshalb als Fragezeichen da. Der Import kennt sie.
+      tex = BLL.ItemDB and BLL.ItemDB:IconPath(e.itemID)
+    end
     if not tex then BLL.Scanner:GetLines(e.itemID) end
   end
   if tex then
@@ -1774,9 +1780,20 @@ function UI:ShowLootline()
             .. it.choiceOf .. ")|r"
         end
       elseif it.chance then
-        chance = string.format(" |cff888888%.1f%%|r", it.chance)
+        chance = " |cff888888" .. (BLL:FormatChance(it.chance)
+          or "") .. "|r"
       else
         chance = ""
+      end
+
+      -- Elite, Boss und seltene Gegner kenntlich machen. "Forest
+      -- Leather Gloves" fallen zu 1,6 % von Humar the Pridelord, einem
+      -- seltenen Elitegegner auf Stufe 23. Als blosse Prozentzahl liest
+      -- sich das wie ein gewoehnlicher Drop, und ein Stufe-15-Jaeger
+      -- laeuft allein los.
+      local mark = it.elite and BLL:EliteLabel(it.elite)
+      if mark then
+        chance = chance .. " |cffff8800" .. mark .. "|r"
       end
 
       local right
@@ -2120,8 +2137,13 @@ function UI:ShowDetail(slotKey)
       elseif src.stype == "V" then
         pre = lock .. "|cff40c040" .. (de and "Haendler:" or "Vendor:") .. "|r |cffcccccc"
       elseif src.chance then
-        post = post .. "  |cffffffff" .. string.format("%.1f%%", src.chance) .. "|r"
+        post = post .. "  |cffffffff"
+          .. (BLL:FormatChance(src.chance) or "") .. "|r"
       end
+      -- Elite und Boss bedeuten Gruppe. Das gehoert an die Quelle, sonst
+      -- laeuft man allein zu einem Gegner, den man nicht umbringt.
+      local elite = src.elite and BLL:EliteLabel(src.elite)
+      if elite then post = post .. "  |cffff8800" .. elite .. "|r" end
       if src.zone then post = post .. "  |cff888888" .. src.zone .. "|r" end
       FitText(measure, row.srcText, pre, src.name or "?", post, 312, 12)
     else
@@ -2132,6 +2154,7 @@ function UI:ShowDetail(slotKey)
     end
 
     local _, _, _, _, _, _, _, _, tex = GetItemInfo(u.id)
+    if not tex then tex = BLL.ItemDB and BLL.ItemDB:IconPath(u.id) end
     if tex then
       row.icon:SetTexture(tex)
       if u.quality and u.quality > 1 then

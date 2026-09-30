@@ -22,7 +22,7 @@ local BLL = BananaLootline
 
 -- Zwei Sprachen, sauber getrennt:
 --   clientLocale  Sprache des Spielclients. Bestimmt Tooltip-Muster und
---                 Rüstungsnamen, denn die liefert der Client. Nicht
+--                 RÃ¼stungsnamen, denn die liefert der Client. Nicht
 --                 umschaltbar.
 --   locale        Anzeigesprache des Addons. Folgt dem Client, bis der
 --                 Nutzer oben rechts DE/EN waehlt.
@@ -156,6 +156,49 @@ local L_enUS = {
   ["HELP_WEIGHT_RST"] = "reset weights",
   ["HELP_SCAN"]       = "rescan gear and print it",
   ["HELP_DUMP"]       = "show raw tooltip lines of an item",
+  ["HELP_TIP"]        = "compare tooltip read methods for one item",
+  ["ST_TITLE"]        = "Self check %s",
+  ["ST_LANG"]         = "Client language %s, display %s",
+  ["ST_PATTERNS"]     = "Tooltip patterns: %s",
+  ["ST_PATTERNS_NOTE"] = "(follows the client, not the switch)",
+  ["ST_PFQUEST_NOTE"] = "- without it there are no locations",
+  ["ST_ITEMDB_COUNT"] = "%d entries",
+  ["ST_GEAR"]         = "Gear: %d of %d pieces with readable stats",
+  ["ST_NO_STATS"]     = "Not a single stat read. That points to tooltip patterns that do not match the client language.",
+  ["ST_WITHOUT"]      = "without stats: %s",
+  ["ST_WITHOUT_NOTE"] = "(normal for trinkets and cloaks that have none)",
+  ["ST_TOOLTIP"]      = "Tooltip readable: %d lines from \"%s\"",
+  ["ST_TOOLTIP_BAD"]  = "Too few lines - the scan tooltip does not return what the game shows.",
+  ["ST_BAND"]         = "Search range %d-%d, planning ahead %d",
+  ["ST_POOL"]         = "Pool %d",
+  ["ST_POOL_LOC"]     = "(%d with location)",
+  ["ST_NOSEARCH"]     = "Not searched yet - /bll up",
+  ["ST_OK"]           = "Nothing unusual.",
+  ["ST_WARN"]         = "%d item(s) to look at - please report the lines marked red.",
+  ["USAGE_TIP"]       = "Usage: /bll tip <itemID>",
+  ["USAGE_ITEM"]      = "Usage: /bll item <itemID>",
+  ["ITEM_NOCACHE"]    = "No cache entry for %d",
+  ["ITEM_HINT"]       = "(run /bll up first, then try again)",
+  ["ITEM_HEAD"]       = "Cache %d: %s",
+  ["ITEM_LEVEL"]      = "Level    ",
+  ["ITEM_SLOT"]       = "Slot     ",
+  ["ITEM_ORIGIN"]     = "Origin   ",
+  ["ITEM_LOCK"]       = "Locked   ",
+  ["ITEM_STATS"]      = "Stats    ",
+  ["ITEM_IMPORT"]     = "import",
+  ["ITEM_SERVER"]     = "server",
+  ["ITEM_NONE"]       = "none",
+  ["HOOKS_HEAD"]      = "Active addons that may extend tooltips:",
+  ["HOOKS_NONE"]      = "none detected",
+  ["HOOKS_TOTAL"]     = "%d addons in total",
+  ["HELP_ITEM"]       = "show the cached entry of an item",
+  ["HELP_HOOKS"]      = "list addons that may extend tooltips",
+  ["TIP_COMPARE"]     = "Tooltip comparison for %s",
+  ["TIP_HINT"]        = "For comparison: hover the item in game and see which lines are missing here.",
+  ["DUMP_LINES"]      = "Tooltip lines:",
+  ["DUMP_FOUND"]      = "Parsed: %s",
+  ["DUMP_NOTHING"]    = "nothing",
+  ["HELP_SELFTEST"]   = "check patterns, languages and data sources",
   ["HELP_SRC"]        = "show sources of an item",
   ["HELP_SET"]        = "set and bonuses of an item",
   ["HELP_USECD"]      = "assumed cooldown for use effects",
@@ -311,6 +354,49 @@ local L_deDE = {
   ["HELP_WEIGHT_RST"] = "Gewichte zuruecksetzen",
   ["HELP_SCAN"]       = "Ausruestung neu scannen und ausgeben",
   ["HELP_DUMP"]       = "rohe Tooltipzeilen eines Items zeigen",
+  ["HELP_TIP"]        = "Leseverfahren fuer den Tooltip vergleichen",
+  ["ST_TITLE"]        = "Selbstpruefung %s",
+  ["ST_LANG"]         = "Clientsprache %s, Anzeige %s",
+  ["ST_PATTERNS"]     = "Tooltipmuster: %s",
+  ["ST_PATTERNS_NOTE"] = "(folgt dem Client, nicht dem Schalter)",
+  ["ST_PFQUEST_NOTE"] = "- ohne sie gibt es keine Fundorte",
+  ["ST_ITEMDB_COUNT"] = "%d Eintraege",
+  ["ST_GEAR"]         = "Ausruestung: %d von %d Teilen mit erkannten Werten",
+  ["ST_NO_STATS"]     = "Kein einziger Wert erkannt. Das deutet darauf hin, dass die Tooltipmuster nicht zur Clientsprache passen.",
+  ["ST_WITHOUT"]      = "ohne Werte: %s",
+  ["ST_WITHOUT_NOTE"] = "(bei Schmuck und Umhaengen ohne Werte ist das normal)",
+  ["ST_TOOLTIP"]      = "Tooltip lesbar: %d Zeilen aus \"%s\"",
+  ["ST_TOOLTIP_BAD"]  = "Zu wenige Zeilen - der Scan-Tooltip liefert nicht, was im Spiel steht.",
+  ["ST_BAND"]         = "Suchband %d-%d, Vorausplanung %d",
+  ["ST_POOL"]         = "Pool %d",
+  ["ST_POOL_LOC"]     = "(%d mit Fundort)",
+  ["ST_NOSEARCH"]     = "Noch nicht gesucht - /bll up",
+  ["ST_OK"]           = "Keine Auffaelligkeiten.",
+  ["ST_WARN"]         = "%d Auffaelligkeit(en) - bitte die rot markierten Zeilen melden.",
+  ["USAGE_TIP"]       = "Nutzung: /bll tip <itemID>",
+  ["USAGE_ITEM"]      = "Nutzung: /bll item <itemID>",
+  ["ITEM_NOCACHE"]    = "Kein Cache-Eintrag fuer %d",
+  ["ITEM_HINT"]       = "(erst /bll up, dann erneut)",
+  ["ITEM_HEAD"]       = "Cache %d: %s",
+  ["ITEM_LEVEL"]      = "Stufe    ",
+  ["ITEM_SLOT"]       = "Slot     ",
+  ["ITEM_ORIGIN"]     = "Herkunft ",
+  ["ITEM_LOCK"]       = "Sperre   ",
+  ["ITEM_STATS"]      = "Werte    ",
+  ["ITEM_IMPORT"]     = "Import",
+  ["ITEM_SERVER"]     = "Server",
+  ["ITEM_NONE"]       = "keine",
+  ["HOOKS_HEAD"]      = "Aktive Addons, die Tooltips erweitern koennten:",
+  ["HOOKS_NONE"]      = "keine erkannt",
+  ["HOOKS_TOTAL"]     = "%d Addons insgesamt",
+  ["HELP_ITEM"]       = "Cache-Eintrag eines Gegenstands zeigen",
+  ["HELP_HOOKS"]      = "Addons auflisten, die Tooltips erweitern",
+  ["TIP_COMPARE"]     = "Tooltip-Vergleich fuer %s",
+  ["TIP_HINT"]        = "Zum Vergleich: im Spiel ueber den Gegenstand fahren und schauen, welche Zeilen dort fehlen.",
+  ["DUMP_LINES"]      = "Tooltipzeilen:",
+  ["DUMP_FOUND"]      = "Erkannt: %s",
+  ["DUMP_NOTHING"]    = "nichts",
+  ["HELP_SELFTEST"]   = "Muster, Sprachen und Datenquellen pruefen",
   ["HELP_SRC"]        = "Quellen eines Items zeigen",
   ["HELP_SET"]        = "Set und Boni eines Items",
   ["HELP_USECD"]      = "angenommene Abklingzeit fuer Use-Effekte",
@@ -557,3 +643,42 @@ BLL.DMG_PATTERN = (BLL.clientLocale == "deDE")
 BLL.SKIP_PREFIX = (BLL.clientLocale == "deDE")
   and { "Benoetigt Stufe", "Seelengebunden", "Beim Anlegen geb", "Einzigartig" }
   or  { "Requires Level", "Soulbound", "Binds when", "Unique" }
+
+------------------------------------------------------------------
+-- Dropchancen lesbar machen.
+--
+-- Die Zahlen aus dem Export reichen weit unter ein Prozent: "Feet of
+-- the Lynx" faellt mit 0,0045 Prozent. Mit "%.1f%%" stand ueberall
+-- "0.0%" - was aussieht wie "faellt nie" und trotzdem der haeufigste
+-- Wert im Bestand ist. Der Median aller Dropzeilen liegt bei 0,0085
+-- Prozent, die kleinste belegte Stelle bei 0,0001. Deshalb wachsen die
+-- Nachkommastellen mit der Kleinheit des Werts, statt ihn wegzurunden.
+function BLL:FormatChance(chance)
+  local c = tonumber(chance)
+  if not c or c <= 0 then return nil end
+  if c >= 10     then return string.format("%.0f%%", c) end
+  if c >= 1      then return string.format("%.1f%%", c) end
+  if c >= 0.1    then return string.format("%.2f%%", c) end
+  if c >= 0.01   then return string.format("%.3f%%", c) end
+  if c >= 0.0001 then return string.format("%.4f%%", c) end
+  return "<0.0001%"
+end
+
+------------------------------------------------------------------
+-- Elitekennung eines Gegners.
+--
+-- Der Export fuehrt sie als Zahl. Fuer den Wegplan zaehlt vor allem der
+-- Unterschied zwischen "kann ich allein" und "brauche ich eine Gruppe";
+-- Selten und Boss stehen daneben, weil ein seltener Gegner nicht immer
+-- da ist und ein Boss eine Instanz bedeutet.
+--   1 Elite, 2 Selten-Elite, 3 Boss, 4 Selten
+------------------------------------------------------------------
+
+function BLL:EliteLabel(rank)
+  local de = (self.locale == "deDE")
+  if rank == 1 then return de and "Elite"  or "Elite"  end
+  if rank == 2 then return de and "Selten-Elite" or "Rare Elite" end
+  if rank == 3 then return de and "Boss"   or "Boss"   end
+  if rank == 4 then return de and "Selten" or "Rare"   end
+  return nil
+end

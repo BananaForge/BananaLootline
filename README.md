@@ -44,7 +44,7 @@ No staves for Hunters. No plate for Rogues. No two-handed axes for Mages. Armor 
 Dungeon, Raid, World Boss, Battleground, Vendor, Quest, World — derived from instance group size, not a curated list. Level ranges are shown next to each location; the range turns orange if you can't enter yet.
 
 ### 🔮 Quest Rewards
-Quests are placed by their quest giver, not dropped into a catch-all group. Opposite-faction quests are filtered out using pfQuest's race mask.
+Quests are placed by their quest giver, not dropped into a catch-all group. Opposite-faction sources — quests and vendors alike — are filtered out using the faction the server records for them.
 
 ### 🔭 Forward Planning
 `/bll ahead <n>` sets how many levels ahead the search reaches. Items above your level appear with a note instead of disappearing.
@@ -59,10 +59,12 @@ A weaker individual piece can rank above a stronger one if it completes a set bo
 Active effects are scored proportionally: 100 Attack Power for 20 seconds on a 120-second cooldown counts as ~17, not 100.
 
 ### 🎲 Proc Effects Are Not Ignored
-Stats are read from the tooltip, so a proc effect written as a sentence scores zero points. Without a guard, Hand of Justice would lose to any piece with four Stamina. When your equipped item has an effect the addon cannot put a number on, a candidate now has to lead clearly instead of narrowly, and such suggestions are marked as an incomplete comparison. Items with no combat effect at all are unaffected — anything with a single stat still beats them.
+A proc effect written as a sentence scores zero points. Without a guard, Hand of Justice would lose to any piece with four Stamina. The bundled data now flags all 629 items that carry one, so the addon knows rather than guesses. When your equipped item has an effect the addon cannot put a number on, a candidate has to lead clearly instead of narrowly, and such suggestions are marked as an incomplete comparison. Items with no combat effect at all are unaffected — anything with a single stat still beats them.
 
-### 🔗 pfQuest Integration
-Drop sources, vendors, quest givers, and chest locations are pulled live from pfQuest's database at runtime. No duplicate data, every pfQuest-octo update takes effect immediately.
+### 🎯 Server Data, Not Vanilla Data
+Drop chances, mob levels, vendor prices and quest rewards come from this server's own database, exported and bundled. That matters: pfQuest's vanilla figures name a level-60+ mob at 1.92% as the best source for *Feet of the Lynx*, an item you can wear at 19. The server knows three mobs at level 23–24, the best at 0.0045%. Quest rewards are absent from pfQuest entirely; 2664 items here come from quests.
+
+pfQuest is still used, for the one thing it gets right: the map. It places the mob, the addon tells you which mob, how likely, at what level, and whether it is an Elite. Without pfQuest installed everything works except the map pin.
 
 ### 💬 Tooltip Hook
 Sources appear on every item tooltip in the game, not only inside the addon window.
@@ -72,7 +74,7 @@ Sources appear on every item tooltip in the game, not only inside the addon wind
 ## 📦 Installation
 
 1. Extract the `BananaLootline` folder into `<WoW directory>\Interface\AddOns\`.
-2. Install **pfQuest** and **pfQuest-octo** — source lookups require them. Everything else works without them.
+2. Optional: install **pfQuest** and **pfQuest-octo** to get map pins for each source. Source lookups themselves work without them.
    → [pfQuest-octo by roby-brok](https://github.com/roby-brok/pfQuest-octo)
 3. Log in and type `/bll`.
 
@@ -128,7 +130,7 @@ EnchantDB.lua           Enchant scoring
 Weights.lua             Stat weights, use effects, scoring
 Core.lua                Init, events, slash commands
 Scanner.lua             Tooltip scan → stat table
-Sources.lua             pfQuest adapter + tooltip hook
+Sources.lua             source lookup (bundled data + pfQuest map) + tooltip hook
 Gear.lua                Equipment and bag scan
 Candidates.lua          Candidate search and upgrade calculation
 UI.lua                  Main window
@@ -168,10 +170,10 @@ Every piece of feedback improves the addon for everyone. You genuinely matter.
 
 ## 📝 Credits
 
-Source data from **pfQuest** and its data packages:
-Eric Mauser (Shagu), The Kludge Bureau, paokkerkir — combined in [pfQuest-octo](https://github.com/roby-brok/pfQuest-octo) by Roby_Brok. MIT-licensed. This addon does not redistribute any of that data; it reads from `pfDB` at runtime.
+Item, stat and source data from the [OctoWoW database](https://octowow.st/db) (AoWoW-based), exported and converted by `tools/octo_import.py`.
 
-Item data from the [OctoWoW database](https://octowow.st/db) (AoWoW-based).
+Map positions and zone names from **pfQuest** and its data packages:
+Eric Mauser (Shagu), The Kludge Bureau, paokkerkir — combined in [pfQuest-octo](https://github.com/roby-brok/pfQuest-octo) by Roby_Brok. MIT-licensed. Coordinates are read from `pfDB` at runtime and not redistributed; the zone names in `Data/ZoneNames.lua` are derived from those packages.
 
 Logo: `Images/BananaForge.tga` — 128×128 uncompressed TGA (required by the 1.12 client).
 

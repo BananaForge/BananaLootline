@@ -31,6 +31,19 @@ local SOURCES = {
   [20] = { { stype = "U", name = "Boss", zone = "Wailing Caverns", chance = 5 } },
   [30] = { { stype = "Q", name = "Eine Quest", id = 777 } },
   [40] = { },
+  -- Beste Quelle ohne Ort, schlechtere mit: der Wegplan muss die
+  -- schlechtere nehmen, sonst faellt das Teil aus der Liste. 301
+  -- Gegenstaende im Datenbestand sehen so aus.
+  [50] = { { stype = "U", name = "Unbekannter Mob", chance = 9 },
+           { stype = "U", name = "Bekannter Mob", zone = "Uldaman", chance = 2 } },
+  -- Der Fall aus dem Bericht: ein Drop von einem seltenen Elitegegner
+  -- und eine Quest im selben Gebiet. Die Gruppe hiess [QUEST], obwohl
+  -- der Drop das gewichtigere Teil ist. Hier Desolace statt Barrens,
+  -- weil Barrens oben schon die Haendlerzone ist.
+  [60] = { { stype = "U", name = "Humar the Pridelord", zone = "Desolace",
+             chance = 1.613, level = 23, elite = 2 } },
+  [70] = { { stype = "Q", name = "Kul Tiran Provisions", zone = "Desolace",
+             id = 888, questLevel = 10 } },
 }
 BLL.Sources = {
   available = true, items = {}, units = {}, quests = {},
@@ -39,11 +52,17 @@ BLL.Sources = {
 }
 
 local SLOTS = { { key = "HeadSlot" }, { key = "HandsSlot" },
-                { key = "FeetSlot" }, { key = "WaistSlot" } }
+                { key = "FeetSlot" }, { key = "WaistSlot" },
+                { key = "BackSlot" }, { key = "WristSlot" },
+                { key = "NeckSlot" } }
 BLL.Gear = { SLOTS = SLOTS, SlotLabel = function(s, x) return x.key end, equipped = {} }
 BLL.ItemDB = { loaded = false, Get = function() return nil end,
                MaskAllows = function() return true end }
 
+-- Die Stammdaten der Instanzen, damit die Kategorie eines Ortes
+-- geprueft werden kann: ein Dungeon bleibt ein Dungeon, auch wenn man
+-- wegen einer Quest hingeht.
+dofile("Data/ZoneData.lua")
 dofile("Candidates.lua")
 local Cand = BLL.Candidates
 BLL.player = { class = "HUNTER", level = 15 }
@@ -55,8 +74,13 @@ BananaLootlineDB.itemcache = {
   [20] = { e = "INVTYPE_HAND", st = { AGI = 20 }, r = 15, q = 3, n = "Aus dem Dungeon" },
   [30] = { e = "INVTYPE_FEET", st = { AGI = 20 }, r = 15, q = 3, n = "Aus der Quest" },
   [40] = { e = "INVTYPE_WAIST", st = { AGI = 25 }, r = 15, q = 3, n = "Ohne Fundort" },
+  [50] = { e = "INVTYPE_CLOAK", st = { AGI = 22 }, r = 15, q = 3, n = "Ort erst in Quelle zwei" },
+  -- Der Drop ist das gewichtigere Teil, die Quest das schwaechere.
+  [60] = { e = "INVTYPE_WRIST", st = { AGI = 40 }, r = 15, q = 3, n = "Vom Elitegegner" },
+  [70] = { e = "INVTYPE_NECK",  st = { AGI = 5  }, r = 15, q = 3, n = "Aus der Quest" },
 }
-Cand.pool = { [10] = 15, [20] = 15, [30] = 15, [40] = 15 }
+Cand.pool = { [10] = 15, [20] = 15, [30] = 15, [40] = 15, [50] = 15,
+              [60] = 15, [70] = 15 }
 Cand.fromImport = { [40] = 1 }
 
 local ok = true
@@ -111,5 +135,51 @@ ups = Cand:GetUpgrades("WaistSlot", 5)
 found = false
 for i = 1, table.getn(ups or {}) do if ups[i].id == 40 then found = true end end
 check(found, "Teil ohne Fundort bleibt in der Einzelansicht sichtbar")
+
+local got = zones()
+check(got["Uldaman"] ~= nil,
+  "das Teil, dessen Ort erst in der zweiten Quelle steht, landet in Uldaman")
+if got["Uldaman"] then
+  check(got["Uldaman"].items[1] and got["Uldaman"].items[1].id == 50,
+    "und zwar das richtige Teil")
+end
+
+------------------------------------------------------------------
+-- Beschriftung und Elitekennung
+------------------------------------------------------------------
+
+local g2 = zones()
+local bar = g2["Desolace"]
+check(bar ~= nil, "die Gruppe entsteht")
+if bar then
+  check(table.getn(bar.items) == 2, "mit beiden Teilen, sind "
+    .. table.getn(bar.items))
+  -- Der Drop bringt 40 Punkte, die Quest 5. Die Beschriftung folgt dem
+  -- gewichtigeren Teil, nicht der Reihenfolge der Ruestungsplaetze.
+  check(bar.category == "WELT",
+    "die Gruppe heisst nach dem gewichtigeren Teil WELT, heisst " .. tostring(bar.category))
+end
+
+-- Der Ort schlaegt die Quellenart. Die Hoehlen des Wehklagens sind ein
+-- Dungeon, ob man wegen einer Quest oder wegen eines Drops hingeht.
+-- Die Gruppe "The Deadmines" stand als [QUEST] da, weil die
+-- Questbelohnung das gewichtigste Teil war.
+local wc = g2["Wailing Caverns"]
+check(wc ~= nil, "die Dungeongruppe entsteht")
+if wc then
+  check(wc.category == "DUNGEON",
+    "sie heisst DUNGEON, nicht nach ihrer Quellenart, heisst "
+    .. tostring(wc.category))
+end
+
+if bar then
+  local drop
+  for i = 1, table.getn(bar.items) do
+    if bar.items[i].id == 60 then drop = bar.items[i] end
+  end
+  check(drop ~= nil, "das Teil vom Elitegegner ist dabei")
+  check(drop and drop.elite == 2, "und traegt die Elitekennung")
+  check(drop and drop.sourceLevel == 23, "und die Stufe des Gegners")
+end
 
 print(ok and "ALLE TESTS OK" or "TESTS FEHLGESCHLAGEN")

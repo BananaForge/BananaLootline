@@ -1,17 +1,35 @@
 --[[----------------------------------------------------------------------
   BananaLootline - Sources.lua
 
-  Adapter auf die pfQuest-Datenbank.
+  Woher die Fundorte kommen.
 
-  Bewusste Architekturentscheidung: wir BUENDELN die Daten nicht, wir LESEN
-  sie zur Laufzeit. Gruende:
-    - items-turtle.lua allein ist ~7,5 MB, units ~4,7 MB. Eine zweite Kopie
-      im Speicher waere reine Verschwendung.
-    - Bei jedem DB-Update von pfQuest-octo profitieren wir automatisch,
-      ohne selbst neu releasen zu muessen.
-    - Keine Lizenz-/Attributionsfragen, weil wir nichts weiterverteilen.
+  ZWEI QUELLEN, KLARE AUFTEILUNG:
 
-  pfQuest-Datenformat (verifiziert gegen roby-brok/pfQuest-octo):
+    Data/SourceData.lua  - der Import aus dem OctoWoW-Export dieses
+                           Servers. Liefert Gegner, Mobstufe, Elite,
+                           Fraktion, Dropchance, Haendlerpreis und
+                           Questbelohnung. Das sind die Zahlen, die im
+                           Spiel gelten.
+    pfQuest              - liefert nur noch die Karte: wo ein Gegner
+                           steht. Die Geografie dort ist richtig.
+
+  Warum die Aufteilung. pfQuests Loot-Angaben stammen aus dem
+  Vanilla-Datenstand und stimmen fuer OctoWoW nicht. Nachgewiesen an
+  "Feet of the Lynx" (Stufe 19): pfQuest nennt als beste Quelle einen
+  Gegner jenseits von Stufe 60 mit 1,92 Prozent. Der Server kennt fuer
+  dasselbe Teil nur Gegner zwischen Stufe 23 und 24, keinen ueber
+  0,0045 Prozent. Questbelohnungen fehlen in pfQuest vollstaendig - das
+  Feld ["Q"] kommt in keiner items-Datei vor, der Zweig lief immer ins
+  Leere. Der Export kennt 2664 Gegenstaende aus Quests.
+
+  Die Zonen-ID des Exports ist NICHT benutzbar: sie mischt
+  AreaTable-IDs (Freiland) mit Map-IDs (Instanzen), und beide
+  ueberschneiden sich. 209 ist als Map-ID Zul'Farrak, als AreaTable
+  Shadowfang Keep. Deshalb bestimmt der Importer die Zone aus pfQuests
+  Koordinaten, dessen Nummernkreis in sich geschlossen ist, und legt sie
+  fertig in SourceData.lua ab. Zur Laufzeit wird nichts geraten.
+
+  pfQuest-Datenformat, soweit noch gelesen (verifiziert gegen roby-brok/pfQuest-octo):
 
     pfDB["items"]["data"][itemID] = {
       ["U"] = { [unitID]   = dropChance },   -- Unit (Mob/Boss)
@@ -44,9 +62,17 @@ Sources.available = false
 ------------------------------------------------------------------
 
 function Sources:Init()
+  -- Der Import ist die erste Quelle und braucht pfQuest nicht.
+  self.imported  = BananaLootlineSourceData
+  self.npcNames  = BananaLootlineNpcNames
+  self.zoneNames = BananaLootlineZoneNames
+
   if not pfDB then
-    self.available = false
-    return false
+    self.items = nil
+    self.available = (self.imported ~= nil)
+    BLL:Debug("Sources init: pfQuest fehlt, Import="
+      .. (self.imported and "ok" or "fehlt"))
+    return self.available
   end
 
   self.items   = pfDB["items"]   and pfDB["items"]["data"]
@@ -60,13 +86,14 @@ function Sources:Init()
   self.zoneloc = pfDB["zones"]   and (pfDB["zones"]["loc"] or pfDB["zones"]["enUS"])
   self.refloot = pfDB["refloot"] and pfDB["refloot"]["data"]
 
-  self.available = (self.items ~= nil)
+  self.available = (self.items ~= nil) or (self.imported ~= nil)
 
   -- Octo-Pack erkennen: der Pack setzt eine eigene SavedVariable
   self.octoPack = (pfQuest_turtlecount ~= nil)
 
   BLL:Debug("Sources init: items=" .. (self.items and "ok" or "fehlt")
     .. " units=" .. (self.units and "ok" or "fehlt")
+    .. " import=" .. (self.imported and "ok" or "fehlt")
     .. " octopack=" .. (self.octoPack and "ja" or "nein"))
 
   return self.available
@@ -76,11 +103,15 @@ end
 -- Namensaufloesung
 ------------------------------------------------------------------
 
+-- pfQuest zuerst, weil es den Namen in der Clientsprache kennt. Der
+-- Import ist immer englisch und deckt die 2,5 Prozent ab, die pfQuest
+-- nicht kennt.
 function Sources:UnitName(id)
-  if not self.unitloc then return "Unit #" .. id end
-  local v = self.unitloc[id]
-  if type(v) == "table" then return v[1] or ("Unit #" .. id) end
-  return v or ("Unit #" .. id)
+  local v = self.unitloc and self.unitloc[id]
+  if type(v) == "table" then v = v[1] end
+  if v then return v end
+  if self.npcNames and self.npcNames[id] then return self.npcNames[id] end
+  return "Unit #" .. id
 end
 
 function Sources:ObjectName(id)
@@ -98,8 +129,9 @@ function Sources:QuestName(id)
 end
 
 function Sources:ZoneName(id)
-  if not self.zoneloc then return nil end
-  local name = self.zoneloc[id]
+  local name = self.zoneloc and self.zoneloc[id]
+  if name == "_" then name = nil end
+  if not name and self.zoneNames then name = self.zoneNames[id] end
   if name == "_" then return nil end
   return name
 end
@@ -207,6 +239,16 @@ function Sources:RaceAllows(questMask)
   return false
 end
 
+-- Wie weit ueber der eigenen Stufe eine Quelle noch als erreichbar gilt.
+--
+-- Grosszuegig bemessen, damit Instanzen drinbleiben: ein Stufe-15-
+-- Charakter geht in die Todesminen, wo Gegner bis Stufe 21 stehen, und
+-- das mit einer Gruppe auch frueher als empfohlen. Mit 10 Stufen
+-- Zuschlag bleibt das drin, ein Gegner jenseits von 60 aber draussen.
+-- Die Vorausplanung kommt oben drauf, weil sie ohnehin Ziele fuer
+-- spaeter zeigen soll.
+local REACH_MARGIN = 10
+
 function Sources:IsReachable(entry)
   -- Quest der Gegenfraktion: existiert, aber nicht fuer diesen Charakter
   if entry.stype == "Q" and not self:RaceAllows(entry.questRace) then
@@ -222,6 +264,48 @@ function Sources:IsReachable(entry)
     if not entry.chance or entry.chance <= 0 then return false end
   end
 
+  -- Mob weit ueber der eigenen Stufe: rechnerisch eine Quelle, praktisch
+  -- keine.
+  --
+  -- "Feet of the Lynx" ist ab Stufe 19 tragbar. pfQuest fuehrt als
+  -- beste Quelle den "Eroded Anubisath Warbringer" mit 1,92 % - einen
+  -- Gegner jenseits von Stufe 60. Fuer einen Stufe-15-Jaeger stand
+  -- damit ein Ziel ganz oben im Wegplan, an das er nicht herankommt.
+  -- 644 der 8364 Quellenpaare im Datenbestand sehen so aus.
+  if entry.level and BLL.player and BLL.player.level then
+    local lvl = tonumber(entry.level)
+    if lvl then
+      local ahead = (BLL.Candidates and BLL.Candidates.PlanAhead
+                     and BLL.Candidates:PlanAhead()) or 0
+      if lvl > BLL.player.level + ahead + REACH_MARGIN then
+        return false
+      end
+    end
+  end
+
+  -- Quests tragen ihre Stufe in questLevel, nicht in level. Der Filter
+  -- oben lief deshalb an ihnen vorbei: einem Stufe-15-Jaeger standen
+  -- "Windreaper" aus einer Stufe-57-Quest und "Archlight Talisman" aus
+  -- einer Stufe-50-Quest ganz oben im Wegplan, beide in den Oestlichen
+  -- Pestlaendern. 2032 der 2883 Questquellen im Datenbestand liegen
+  -- ueber Stufe 21.
+  --
+  -- Hier gilt kein Zuschlag wie bei Gegnern. Einen Gegner ueber der
+  -- eigenen Stufe kann man in einer Gruppe erlegen; eine Quest, deren
+  -- Mindeststufe man nicht hat, kann man nicht einmal annehmen. Die
+  -- Angabe ist die geforderte Stufe des Servers, bei 2905 von 2906
+  -- Questbelohnungen vorhanden.
+  if entry.questLevel and BLL.player and BLL.player.level then
+    local lvl = tonumber(entry.questLevel)
+    if lvl then
+      local ahead = (BLL.Candidates and BLL.Candidates.PlanAhead
+                     and BLL.Candidates:PlanAhead()) or 0
+      if lvl > BLL.player.level + ahead then
+        return false
+      end
+    end
+  end
+
   return true
 end
 
@@ -233,17 +317,158 @@ local TYPE_LABEL = {
   ["C"] = "OBJECT",
 }
 
+------------------------------------------------------------------
+-- Quellen aus dem Import
+--
+-- SourceData.lua haelt je Gegenstand bis zu drei Quellen pro Art, nach
+-- Chance sortiert. Mehr braucht niemand: wer ein Teil sucht, will die
+-- drei besten Gegner, nicht alle 473.
+--
+--   d Gegner   { n = NPC, l = Stufe, z = Zone, p = Chance,
+--                e = Elitestufe, f = Fraktion }
+--   v Haendler { n = NPC, z = Zone, c = Preis in Kupfer, f, t = Marke }
+--   q Quest    { q = Quest-ID, t = Titel, l = Mindeststufe, f,
+--                x = Anzahl Auswahlbelohnungen }
+--   o Objekt   { n = ID, t = Name, p = Chance }
+--   c Beruf    { s = Zauber-ID, t = Name }
+--
+-- f ist 1 fuer Allianz, 2 fuer Horde, fehlt wenn beide herankommen.
+------------------------------------------------------------------
+
+local FACTION_NAME = { [1] = "Alliance", [2] = "Horde" }
+
+function Sources:FactionAllows(side)
+  if not side then return true end
+  local mine = UnitFactionGroup and UnitFactionGroup("player")
+  if not mine then return true end
+  return FACTION_NAME[side] == mine
+end
+
+function Sources:ImportedSources(itemID)
+  if not self.imported or not itemID then return nil end
+  local entry = self.imported[itemID]
+  if type(entry) ~= "table" then return nil end
+
+  local L = BLL.L
+  local minChance = (BananaLootlineDB and BananaLootlineDB.minDropChance) or 0
+  local out = {}
+
+  local function add(row)
+    if self:FactionAllows(row.faction) then table.insert(out, row) end
+  end
+
+  for i = 1, table.getn(entry.d or {}) do
+    local r = entry.d[i]
+    if (r.p or 0) >= minChance then
+      add({
+        stype     = "U",
+        typeLabel = L["DROPS_FROM"],
+        id        = r.n,
+        name      = self:UnitName(r.n),
+        zone      = r.z and self:ZoneName(r.z) or nil,
+        level     = r.l,
+        chance    = r.p,
+        elite     = r.e,
+        faction   = r.f,
+        imported  = true,
+      })
+    end
+  end
+
+  for i = 1, table.getn(entry.v or {}) do
+    local r = entry.v[i]
+    add({
+      stype     = "V",
+      typeLabel = L["VENDOR"],
+      id        = r.n,
+      name      = self:UnitName(r.n),
+      zone      = r.z and self:ZoneName(r.z) or nil,
+      cost      = r.c,
+      tag       = r.t,
+      faction   = r.f,
+      sure      = true,
+      imported  = true,
+    })
+  end
+
+  for i = 1, table.getn(entry.q or {}) do
+    local r = entry.q[i]
+    add({
+      stype      = "Q",
+      typeLabel  = L["QUEST"],
+      id         = r.q,
+      name       = r.t,
+      questLevel = r.l,
+      choices    = r.x,
+      faction    = r.f,
+      -- Der Ort einer Questbelohnung ist der Questgeber. Ohne ihn
+      -- stuende sie ohne Ort in der Liste und der Wegplan sagte nichts.
+      zone       = r.z and self:ZoneName(r.z) or nil,
+      giver      = r.g and self:UnitName(r.g) or nil,
+      sure       = true,
+      imported   = true,
+    })
+  end
+
+  for i = 1, table.getn(entry.o or {}) do
+    local r = entry.o[i]
+    if (r.p or 0) >= minChance then
+      add({
+        stype     = "O",
+        typeLabel = L["OBJECT"],
+        id        = r.n,
+        name      = r.t,
+        chance    = r.p,
+        zone      = r.z and self:ZoneName(r.z) or nil,
+        imported  = true,
+      })
+    end
+  end
+
+  if table.getn(out) == 0 then return nil end
+  return out
+end
+
 function Sources:GetItemSources(itemID, depth)
   if not self.available or not itemID then return nil end
   depth = depth or 0
   if depth > 1 then return nil end   -- Rekursion ueber refloot begrenzen
 
-  local entry = self.items[itemID]
+  local L = BLL.L
+  local minChance = (BananaLootlineDB and BananaLootlineDB.minDropChance) or 0
+
+  -- Der Import gewinnt, wo er etwas weiss. Seine Zahlen kommen von
+  -- diesem Server; pfQuests Zahlen kommen aus dem Vanilla-Datenstand.
+  -- Nur wenn der Import den Gegenstand nicht kennt, wird pfQuest
+  -- gelesen - dann ist eine ungenaue Angabe besser als keine.
+  local imported = self:ImportedSources(itemID)
+  if imported then
+    if not (BananaLootlineDB and BananaLootlineDB.showUnreachable) then
+      local keep = {}
+      for i = 1, table.getn(imported) do
+        if self:IsReachable(imported[i]) then
+          table.insert(keep, imported[i])
+        end
+      end
+      imported = keep
+    end
+    table.sort(imported, function(a, b)
+      local ca = a.sure and 100 or (a.chance or 0)
+      local cb = b.sure and 100 or (b.chance or 0)
+      return ca > cb
+    end)
+    -- Kennt der Import den Gegenstand, ist das die Antwort - auch wenn
+    -- der Filter alles verworfen hat. Kein Rueckfall auf pfQuest:
+    -- "keine erreichbare Quelle" ist richtig, pfQuests Endgame-Gegner
+    -- waere falsch.
+    if table.getn(imported) == 0 then return nil end
+    return imported
+  end
+
+  local entry = self.items and self.items[itemID]
   if not entry or type(entry) ~= "table" then return nil end
 
-  local L = BLL.L
   local out = {}
-  local minChance = (BananaLootlineDB and BananaLootlineDB.minDropChance) or 0
 
   -- Direkte Quellen
   for stype, label in pairs(TYPE_LABEL) do
@@ -301,8 +526,16 @@ function Sources:GetItemSources(itemID, depth)
 
   -- Referenz-Loottabellen aufloesen: das Item haengt an einer geteilten
   -- Tabelle, die wiederum an Units haengt.
-  if entry["L"] and self.refloot then
-    for refID, refChance in pairs(entry["L"]) do
+  -- Das Feld heisst in allen geprueften Datenpaketen "R", nicht "L":
+  -- pfQuest-octo, pfQuest-turtle und das Vanilla-Paket fuehren
+  -- ausnahmslos ["R"], ein ["L"] kommt in keiner items-Datei vor. Der
+  -- Zweig lief damit immer ins Leere. Allein im OctoWoW-Datenstand
+  -- haengen 706 Gegenstaende an einer Referenztabelle, 247 davon haben
+  -- gar keine andere Quelle und standen deshalb ohne Fundort da.
+  -- Beide Schreibweisen werden gelesen, falls ein Paket doch abweicht.
+  local refs = entry["R"] or entry["L"]
+  if refs and self.refloot then
+    for refID, refChance in pairs(refs) do
       local ref = self.refloot[refID]
       if type(ref) == "table" and ref["U"] then
         for unitID, uChance in pairs(ref["U"]) do
@@ -407,9 +640,86 @@ end
 local lastTooltipItem = nil
 local pendingLink = nil     -- vom zuletzt gesetzten Tooltip
 
+------------------------------------------------------------------
+-- Zugangsbedingung aus dem ECHTEN Tooltip mitlesen
+--
+-- Der nachgebaute Scan-Tooltip liefert sie nicht. Bei "Outrider's Bow"
+-- kamen dort sechs Zeilen an, im Spiel hat er sieben: die Zeile
+-- "Warsong Gulch - Revered" fehlte in jeder Leseart - versteckt,
+-- sichtbar, an WorldFrame und an UIParent gehaengt.
+--
+-- Auch der Datenbankauszug fuehrt das Feld nicht. Der Tooltip im Spiel
+-- ist damit die einzige Stelle, an der diese Auskunft ueberhaupt steht.
+-- Also wird sie hier abgegriffen, sobald der Spieler ueber den
+-- Gegenstand faehrt - in der Vorschlagsliste also beim Hinsehen.
+--
+-- Der Befund landet im gespeicherten Cache und gilt ab dann dauerhaft,
+-- auch wenn der Client den Tooltip laengst wieder vergessen hat.
+------------------------------------------------------------------
+
+local function CaptureRestriction(tooltip, itemID)
+  if not itemID or not BananaLootlineDB then return end
+  local cache = BananaLootlineDB.itemcache
+  if not cache then return end
+
+  local entry = cache[itemID]
+  -- Unbekannt oder laengst geklaert: nichts zu tun.
+  if not entry or entry.lock ~= nil then return end
+
+  local name = tooltip.GetName and tooltip:GetName()
+  local n = tooltip.NumLines and tooltip:NumLines() or 0
+  if not name or n < 2 then return end
+
+  -- Steht ueberhaupt noch derselbe Gegenstand im Tooltip? Die Pruefung
+  -- laeuft verzoegert, in der Zwischenzeit kann der Zeiger weiter sein.
+  -- Ohne diesen Abgleich bekaeme der falsche Gegenstand die Sperre.
+  if entry.n then
+    local first = getglobal(name .. "TextLeft1")
+    local title = first and first:GetText()
+    if title and title ~= "" and title ~= entry.n then return end
+  end
+
+  -- Zeile 1 ist der Itemname, eine Bedingung steht direkt darunter.
+  -- Beim eigenen Zusatzblock abbrechen, damit wir nicht unsere eigenen
+  -- Zeilen auswerten.
+  for i = 2, n do
+    local fs = getglobal(name .. "TextLeft" .. i)
+    local txt = fs and fs:GetText()
+    if txt == "|cffffcc33Banana|cffffffffLootline|r" then break end
+    if BLL.Scanner:IsRestrictionLine(txt) then
+      entry.lock = txt
+      BLL:Debug("Zugangsbedingung fuer " .. itemID .. ": " .. txt)
+      return
+    end
+  end
+end
+
+------------------------------------------------------------------
+-- Verzoegerter Abgriff
+--
+-- Die Bedingungszeile kommt von einem fremden Addon, nicht vom Client.
+-- Welches zuerst an den Tooltip schreibt, entscheidet die
+-- Ladereihenfolge - darauf koennen wir uns nicht verlassen. Deshalb
+-- wird die Itemnummer nur vorgemerkt und einen Frame spaeter gelesen,
+-- wenn alle anderen Addons ihre Zeilen angehaengt haben.
+------------------------------------------------------------------
+
+local captureQueue = nil
+local captureFrame = CreateFrame("Frame", "BananaLootlineTooltipWatcher")
+captureFrame:SetScript("OnUpdate", function()
+  if not captureQueue then return end
+  local id = captureQueue
+  captureQueue = nil
+  if GameTooltip and GameTooltip.IsShown and GameTooltip:IsShown() then
+    CaptureRestriction(GameTooltip, id)
+  end
+end)
+
+local function QueueCapture(itemID)
+  captureQueue = itemID
+end
+
 local function AppendSources(tooltip, knownLink)
-  if not BananaLootlineDB or not BananaLootlineDB.tooltipSources then return end
-  if not Sources.available then return end
   if not tooltip or not tooltip.AddLine then return end
 
   local link = knownLink or pendingLink
@@ -424,6 +734,23 @@ local function AppendSources(tooltip, knownLink)
 
   local itemID = BLL.Scanner:GetItemID(link)
   if not itemID then return end
+
+  -- Die Bedingung wird IMMER mitgelesen: sie haengt weder an der
+  -- Quellenanzeige noch an pfQuest, und sie ist die einzige Auskunft
+  -- darueber, ob man an den Gegenstand ueberhaupt herankommt. Auch vor
+  -- der Wiederholungssperre, damit sie ankommt, wenn derselbe
+  -- Gegenstand zweimal hintereinander unter dem Zeiger liegt.
+  --
+  -- Erst im naechsten Frame, nicht sofort: Die Zeile stammt von einem
+  -- anderen Addon, und wer zuerst gehookt hat, schreibt zuerst. Mit
+  -- allen Addons aus verschwand sie im Test komplett. Sofort gelesen
+  -- wuerden wir also je nach Ladereihenfolge ins Leere greifen; einen
+  -- Frame spaeter sind alle durch.
+  QueueCapture(itemID)
+
+  -- Ab hier geht es nur noch um die angehaengte Quellenliste.
+  if not BananaLootlineDB or not BananaLootlineDB.tooltipSources then return end
+  if not Sources.available then return end
 
   if lastTooltipItem == itemID then return end
   lastTooltipItem = itemID

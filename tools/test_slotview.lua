@@ -86,7 +86,15 @@ for i = 1, 3 do
   end
   print(i, strip(r.name.text), "|", strip(r.value.text), "|", strip(r.diffText.text), "|", strip(r.srcText.text))
 end
-check(string.find(strip(pane.rows[1].srcText.text), "Brainwashed Noble  64.0%  Westfall", 1, true), "Quelle mit Chance und Zone")
+-- Grosse Chancen ohne Nachkommastelle, kleine mit dreien: die Zahlen
+-- aus dem Export reichen bis 0,0045 Prozent, "0.0%" waere dort nichts
+-- als ein Irrtum. Siehe BLL:FormatChance in Locale.lua.
+check(string.find(strip(pane.rows[1].srcText.text), "Brainwashed Noble  64%  Westfall", 1, true), "Quelle mit Chance und Zone")
+check(BLL:FormatChance(0.0045) == "0.0045%", "winzige Chance bleibt lesbar")
+check(BLL:FormatChance(0.00001) == "<0.0001%", "noch kleinere wird zusammengefasst")
+check(BLL:FormatChance(0.0163) == "0.016%", "kleine Chance mit drei Stellen")
+check(BLL:FormatChance(1.92) == "1.9%", "einstellige Chance mit einer Stelle")
+check(BLL:FormatChance(0) == nil, "null ist keine Chance")
 check(strip(pane.rows[1].value.text) == "+1.9", "Wert")
 local q = strip(pane.rows[3].srcText.text)
 check(string.find(q, "^ab 20") and string.find(q, "Quest:") and string.find(q, "Stufe 18") and string.find(q, "Loch Modan") and not string.find(q, "1.0%%"), "Questquelle: " .. q)

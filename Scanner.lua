@@ -199,6 +199,15 @@ local function IsRestriction(line)
   return false
 end
 
+-- Oeffentliche Fassung fuer Aufrufer ausserhalb des Statscans, vor allem
+-- den Tooltip-Hook. Reine Stufenzeilen filtert sie gleich mit weg - im
+-- Statscan uebernimmt das vorher SKIP_PREFIX.
+function Scanner:IsRestrictionLine(line)
+  if type(line) ~= "string" or line == "" then return false end
+  if ShouldSkip(line) then return false end
+  return IsRestriction(line)
+end
+
 -- Liefert die Werte und - als zweiten Rueckgabewert - eine Tabelle mit
 -- dem, was der Tooltip sonst noch verraet. Aufrufer, die nur die Werte
 -- brauchen, merken davon nichts.
@@ -327,11 +336,11 @@ end
 function Scanner:DumpLines(item)
   local lines = self:GetLines(item)
   if not lines then
-    BLL:Print("Keine Tooltipdaten (Item nicht gecached?)")
+    BLL:Print(BLL.L["NO_SOURCE"])
     return
   end
 
-  BLL:Print("Tooltipzeilen:")
+  BLL:Print(BLL.L["DUMP_LINES"])
   for i = 1, table.getn(lines) do
     DEFAULT_CHAT_FRAME:AddMessage("  |cff888888[" .. i .. "]|r " .. lines[i])
   end
@@ -341,7 +350,8 @@ function Scanner:DumpLines(item)
   for k, v in pairs(stats or {}) do
     found = found .. k .. "=" .. v .. "  "
   end
-  BLL:Print("Erkannt: " .. (found ~= "" and found or "|cffff0000nichts|r"))
+  BLL:Print(string.format(BLL.L["DUMP_FOUND"],
+    (found ~= "") and found or ("|cffff0000" .. BLL.L["DUMP_NOTHING"] .. "|r")))
 
   -- Zeilen, die nach einem Effekt aussehen, aus denen aber kein Wert
   -- kam. Wer eine harmlose Zeile hier auftauchen sieht, hat einen
@@ -357,6 +367,68 @@ function Scanner:DumpLines(item)
     BLL:Print("|cffff0000" .. BLL.L["DUMP_LOCKED"] .. "|r")
     DEFAULT_CHAT_FRAME:AddMessage("  |cff888888-|r " .. meta.restricted)
   end
+end
+
+------------------------------------------------------------------
+-- Tooltip-Diagnose
+--
+-- Anlass: Der Tooltip im Spiel zeigte bei "Outrider's Bow" die Zeile
+-- "Warsong Gulch - Revered". Im Scan-Tooltip fehlte sie, obwohl das
+-- Muster sie erkannt haette. Ohne diese Zeile kann das Addon nicht
+-- wissen, dass man den Gegenstand nicht einfach kaufen kann.
+--
+-- Diese Funktion liest denselben Gegenstand auf vier Wegen und zeigt,
+-- welcher die vollstaendigen Zeilen liefert. Damit laesst sich die
+-- Ursache feststellen, statt sie zu vermuten.
+------------------------------------------------------------------
+
+function Scanner:CompareTooltip(item)
+  local link = ToHyperlink(item)
+  if not link then
+    BLL:Print(BLL.L["USAGE_TIP"])
+    return
+  end
+
+  -- Jeder Weg: Beschreibung, Besitzer, ob der Tooltip sichtbar gemacht wird
+  local ways = {
+    { "SetOwner(WorldFrame), versteckt", WorldFrame, false },
+    { "SetOwner(WorldFrame), sichtbar",  WorldFrame, true  },
+    { "SetOwner(UIParent), versteckt",   UIParent,   false },
+    { "SetOwner(UIParent), sichtbar",    UIParent,   true  },
+  }
+
+  BLL:Print(string.format(BLL.L["TIP_COMPARE"], link))
+
+  for w = 1, table.getn(ways) do
+    local name, owner, show = ways[w][1], ways[w][2], ways[w][3]
+
+    scanTip:SetOwner(owner or WorldFrame, "ANCHOR_NONE")
+    scanTip:ClearLines()
+    WipeScanTooltip()
+    if show then scanTip:Show() end
+
+    local ok = pcall(function() scanTip:SetHyperlink(link) end)
+    local n = ok and scanTip:NumLines() or 0
+
+    local got = {}
+    for i = 1, n do
+      local l = getglobal("BananaLootlineScanTooltipTextLeft" .. i)
+      local r = getglobal("BananaLootlineScanTooltipTextRight" .. i)
+      local lt = l and l:GetText()
+      local rt = r and r:GetText()
+      if lt and lt ~= "" then table.insert(got, "L" .. i .. ": " .. lt) end
+      if rt and rt ~= "" then table.insert(got, "R" .. i .. ": " .. rt) end
+    end
+    scanTip:Hide()
+
+    DEFAULT_CHAT_FRAME:AddMessage("|cffffcc33" .. name .. "|r  NumLines="
+      .. n .. ", Zeilen=" .. table.getn(got))
+    for i = 1, table.getn(got) do
+      DEFAULT_CHAT_FRAME:AddMessage("   |cff888888" .. got[i] .. "|r")
+    end
+  end
+
+  BLL:Print(BLL.L["TIP_HINT"])
 end
 
 ------------------------------------------------------------------

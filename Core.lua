@@ -13,7 +13,7 @@ BananaLootline = BananaLootline or {}
 local BLL = BananaLootline
 local L = BLL.L
 
-BLL.VERSION = "0.20.0"
+BLL.VERSION = "0.21.1"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -216,6 +216,148 @@ frame:SetScript("OnUpdate", function()
 end)
 
 ------------------------------------------------------------------
+-- Selbstpruefung
+--
+-- Prueft im laufenden Spiel, was sich von aussen nicht feststellen
+-- laesst: ob die Tooltipmuster gegen die tatsaechlich angelegte
+-- Ausruestung greifen, ob Client- und Anzeigesprache zusammenpassen und
+-- ob die Datenquellen da sind. Gedacht als Ausgabe, die ein Tester
+-- direkt weitergeben kann.
+------------------------------------------------------------------
+
+local function Mark(good) return good and "|cff00ff00OK|r" or "|cffff0000!!|r" end
+
+function BLL:SelfTest()
+  local out = DEFAULT_CHAT_FRAME
+  local warn = 0
+
+  self:Print("|cffffcc33" .. string.format(L["ST_TITLE"], self.VERSION) .. "|r")
+
+  ----------------------------------------------------------------
+  -- Sprachen
+  ----------------------------------------------------------------
+  out:AddMessage("  " .. string.format(L["ST_LANG"],
+    tostring(self.clientLocale), tostring(self.locale)))
+  local patLang = (self.clientLocale == "deDE") and "deDE" or "enUS"
+  out:AddMessage("  " .. string.format(L["ST_PATTERNS"], patLang)
+    .. " " .. Mark(true) .. " |cff888888" .. L["ST_PATTERNS_NOTE"] .. "|r")
+
+  ----------------------------------------------------------------
+  -- Datenquellen
+  ----------------------------------------------------------------
+  local pf = self.Sources and self.Sources.available
+  out:AddMessage("  pfQuest " .. Mark(pf)
+    .. (pf and "" or (" |cff888888" .. L["ST_PFQUEST_NOTE"] .. "|r")))
+  if not pf then warn = warn + 1 end
+
+  local db = self.ItemDB and self.ItemDB.loaded
+  out:AddMessage("  ItemDB " .. Mark(db) .. " "
+    .. (db and string.format(L["ST_ITEMDB_COUNT"], self.ItemDB.count)
+           or L["ITEMDB_NONE"]))
+  if not db then warn = warn + 1 end
+
+  ----------------------------------------------------------------
+  -- Der Import der Fundorte. Ohne ihn liest das Addon wieder pfQuest,
+  -- und dessen Dropchancen stimmen fuer diesen Server nicht.
+  ----------------------------------------------------------------
+
+  local function Count(t)
+    if type(t) ~= "table" then return nil end
+    local n = 0
+    for _ in pairs(t) do n = n + 1 end
+    return n
+  end
+
+  local nSrc  = Count(BananaLootlineSourceData)
+  local nNpc  = Count(BananaLootlineNpcNames)
+  local nZone = Count(BananaLootlineZoneNames)
+  local src   = (nSrc or 0) > 0
+  out:AddMessage("  SourceData " .. Mark(src) .. " "
+    .. (src and ((nSrc or 0) .. " Items, " .. (nNpc or 0) .. " NPCs, "
+                 .. (nZone or 0) .. " Zonen")
+            or "fehlt - Fundorte kommen aus pfQuest"))
+  if not src then warn = warn + 1 end
+
+  ----------------------------------------------------------------
+  -- Die eigentliche Probe: greifen die Muster an der Ausruestung?
+  --
+  -- Ein belegter Platz, aus dessen Tooltip kein einziger Wert kommt,
+  -- ist das Zeichen dafuer, dass die Muster nicht zur Clientsprache
+  -- passen. Genau so fiel auf, dass "St[aä]rke" nie greifen konnte.
+  ----------------------------------------------------------------
+  local worn, parsed, empty = 0, 0, {}
+  for i = 1, table.getn(self.Gear.SLOTS) do
+    local slot = self.Gear.SLOTS[i]
+    local d = self.Gear.equipped[slot.key]
+    if d then
+      worn = worn + 1
+      local any = false
+      for _ in pairs(d.stats or {}) do any = true break end
+      if any then
+        parsed = parsed + 1
+      else
+        table.insert(empty, d.name or slot.key)
+      end
+    end
+  end
+
+  out:AddMessage("  " .. string.format(L["ST_GEAR"], parsed, worn)
+    .. " " .. Mark(worn == 0 or parsed > 0))
+  if worn > 0 and parsed == 0 then
+    warn = warn + 1
+    out:AddMessage("   |cffff0000" .. L["ST_NO_STATS"] .. "|r")
+  elseif table.getn(empty) > 0 then
+    out:AddMessage("   |cff888888"
+      .. string.format(L["ST_WITHOUT"], table.concat(empty, ", ")) .. "|r")
+    out:AddMessage("   |cff888888" .. L["ST_WITHOUT_NOTE"] .. "|r")
+  end
+
+  ----------------------------------------------------------------
+  -- Vollstaendigkeit der Tooltipzeilen
+  --
+  -- Der Scan-Tooltip liefert nicht zwingend alles, was im Spiel zu
+  -- sehen ist. Fehlen Zeilen, bleiben Zugangsbedingungen unsichtbar.
+  ----------------------------------------------------------------
+  local probe, probeName
+  for i = 1, table.getn(self.Gear.SLOTS) do
+    local d = self.Gear.equipped[self.Gear.SLOTS[i].key]
+    if d and d.id then probe, probeName = d.id, d.name break end
+  end
+  if probe then
+    local lines = self.Scanner:GetLines(probe)
+    local n = table.getn(lines or {})
+    out:AddMessage("  " .. string.format(L["ST_TOOLTIP"], n,
+      tostring(probeName)) .. " " .. Mark(n > 2))
+    if n <= 2 then
+      warn = warn + 1
+      out:AddMessage("   |cffff0000" .. L["ST_TOOLTIP_BAD"] .. "|r")
+    end
+  end
+
+  ----------------------------------------------------------------
+  -- Suchbereich
+  ----------------------------------------------------------------
+  local lo, hi = self.Candidates:Band()
+  out:AddMessage("  " .. string.format(L["ST_BAND"], lo, hi,
+    self.Candidates:PlanAhead()))
+  if self.Candidates.pool then
+    out:AddMessage("  " .. string.format(L["ST_POOL"],
+      self.Candidates.poolSize or 0)
+      .. " |cff888888" .. string.format(L["ST_POOL_LOC"],
+      self.Candidates.pfqCount or 0) .. "|r")
+  else
+    out:AddMessage("  |cff888888" .. L["ST_NOSEARCH"] .. "|r")
+  end
+
+  ----------------------------------------------------------------
+  if warn == 0 then
+    self:Print("|cff00ff00" .. L["ST_OK"] .. "|r")
+  else
+    self:Print("|cffff8800" .. string.format(L["ST_WARN"], warn) .. "|r")
+  end
+end
+
+------------------------------------------------------------------
 -- Slash-Befehle
 ------------------------------------------------------------------
 
@@ -259,6 +401,73 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       BLL.Scanner:DumpLines(id)
     end
 
+  elseif command == "tip" then
+    local id = tonumber(param)
+    if not id then
+      BLL:Print(L["USAGE_TIP"])
+    else
+      BLL.Scanner:CompareTooltip(id)
+    end
+
+  elseif command == "selftest" then
+    BLL:SelfTest()
+
+  elseif command == "item" then
+    -- Zeigt, was im gespeicherten Cache zu einem Gegenstand steht.
+    -- Damit laesst sich pruefen, ob eine Zugangsbedingung beim
+    -- Ueberfahren tatsaechlich angekommen ist.
+    local id = tonumber(param)
+    if not id then
+      BLL:Print(L["USAGE_ITEM"])
+    else
+      local e = BananaLootlineDB.itemcache and BananaLootlineDB.itemcache[id]
+      if not e then
+        BLL:Print(string.format(L["ITEM_NOCACHE"], id)
+          .. " |cff888888" .. L["ITEM_HINT"] .. "|r")
+      else
+        BLL:Print(string.format(L["ITEM_HEAD"], id, tostring(e.n)))
+        local function row(k, v)
+          DEFAULT_CHAT_FRAME:AddMessage("   |cff888888" .. k .. "|r "
+            .. tostring(v))
+        end
+        row(L["ITEM_LEVEL"], e.r)
+        row(L["ITEM_SLOT"], e.e)
+        row(L["ITEM_ORIGIN"], e.db and L["ITEM_IMPORT"] or L["ITEM_SERVER"])
+        row(L["ITEM_LOCK"], e.lock or ("|cff888888" .. L["ITEM_NONE"] .. "|r"))
+        local st = ""
+        for k, v in pairs(e.st or {}) do st = st .. k .. "=" .. v .. " " end
+        row(L["ITEM_STATS"], (st ~= "") and st or ("|cff888888" .. L["ITEM_NONE"] .. "|r"))
+      end
+    end
+
+  elseif command == "hooks" then
+    -- Welche fremden Addons koennen am Tooltip haengen?
+    --
+    -- Die Rufzeile stammt nicht vom Client, sondern von einem anderen
+    -- Addon. Diese Uebersicht engt ein, welches in Frage kommt.
+    BLL:Print(L["HOOKS_HEAD"])
+    local n = GetNumAddOns and GetNumAddOns() or 0
+    local found = 0
+    for i = 1, n do
+      local name, _, _, enabled = GetAddOnInfo(i)
+      if enabled and name and name ~= "BananaLootline" then
+        local low = string.lower(name)
+        if string.find(low, "atlas") or string.find(low, "pfui")
+           or string.find(low, "aux") or string.find(low, "tooltip")
+           or string.find(low, "scanner") or string.find(low, "stat")
+           or string.find(low, "api") or string.find(low, "loot")
+           or string.find(low, "shagu") or string.find(low, "bag") then
+          found = found + 1
+          DEFAULT_CHAT_FRAME:AddMessage("   |cffffcc33" .. name .. "|r")
+        end
+      end
+    end
+    if found == 0 then
+      DEFAULT_CHAT_FRAME:AddMessage("   |cff888888" .. L["HOOKS_NONE"] .. "|r")
+    end
+    DEFAULT_CHAT_FRAME:AddMessage("   |cff888888"
+      .. string.format(L["HOOKS_TOTAL"], n) .. "|r")
+
   elseif command == "src" then
     local id = tonumber(param)
     if not id then
@@ -271,9 +480,27 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
         BLL:Print(string.format(L["SRC_HEADER"], id))
         for i = 1, table.getn(list) do
           local s = list[i]
+          -- Alles, was der Import weiss, gehoert in diese Zeile: die
+          -- Stufe des Gegners, ob er Elite ist, was der Haendler
+          -- verlangt. Danach wird hier gesucht, wenn ein Fundort
+          -- zweifelhaft aussieht.
+          local extra = ""
+          if s.level then extra = extra .. " |cff888888[" .. s.level .. "]|r" end
+          local elite = s.elite and BLL:EliteLabel(s.elite)
+          if elite then extra = extra .. " |cffff8800" .. elite .. "|r" end
+          if s.cost then
+            extra = extra .. " |cffffd100"
+              .. math.floor(s.cost / 10000) .. "g"
+              .. math.mod(math.floor(s.cost / 100), 100) .. "s"
+              .. math.mod(s.cost, 100) .. "k|r"
+          end
+          if s.tag then extra = extra .. " |cff888888<" .. s.tag .. ">|r" end
           DEFAULT_CHAT_FRAME:AddMessage("   " .. s.typeLabel .. ": " .. s.name
-            .. (s.chance and (" (" .. s.chance .. "%)") or "")
-            .. (s.zone and (" |cff888888- " .. s.zone .. "|r") or ""))
+            .. (s.chance and (" (" .. (BLL:FormatChance(s.chance)
+               or "?") .. ")") or "")
+            .. extra
+            .. (s.zone and (" |cff888888- " .. s.zone .. "|r") or "")
+            .. (s.imported and "" or " |cff666666(pfQuest)|r"))
         end
       end
     end
@@ -449,6 +676,10 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       { "/bll weight reset",    "HELP_WEIGHT_RST" },
       { "/bll scan",            "HELP_SCAN"       },
       { "/bll dump <id>",       "HELP_DUMP"       },
+      { "/bll tip <id>",        "HELP_TIP"        },
+      { "/bll item <id>",       "HELP_ITEM"       },
+      { "/bll hooks",           "HELP_HOOKS"      },
+      { "/bll selftest",        "HELP_SELFTEST"   },
       { "/bll src <id>",        "HELP_SRC"        },
       { "/bll set <id>",        "HELP_SET"        },
       { "/bll usecd <s>",       "HELP_USECD"      },

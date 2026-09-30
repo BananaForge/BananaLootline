@@ -48,6 +48,24 @@ function ItemDB:Get(itemID)
   return self.data[itemID]
 end
 
+-- Symbolpfad eines Gegenstands.
+--
+-- GetItemInfo liefert die Textur nur fuer Gegenstaende, die der Client
+-- schon einmal gesehen hat. Alles andere stand im Fenster als
+-- Fragezeichen - und das betrifft gerade die Teile, die man noch nicht
+-- hat, also genau die, um die es in einem Ausruestungsplaner geht.
+--
+-- Der Import fuehrt den Namen der Textur ohne Pfad. Der Pfad ist immer
+-- derselbe; der Client sucht ihn ohne Ruecksicht auf Gross- und
+-- Kleinschreibung.
+local ICON_PATH = "Interface\\Icons\\"
+
+function ItemDB:IconPath(itemID)
+  local e = self:Get(itemID)
+  if not e or not e.icon then return nil end
+  return ICON_PATH .. e.icon
+end
+
 function ItemDB:GetLevel(itemID)
   local e = self:Get(itemID)
   return e and e.ilvl or nil
