@@ -27,7 +27,14 @@ The difference is not academic. pfQuest's vanilla figures name a level-60+ mob a
 
 **What's bundled:** 14,230 equippable items, 11,519 of them with a source, 6,941 named NPCs, 137 zones, 172 sets with their bonuses.
 
-**What pfQuest still does:** the map. It knows where a mob stands, and its geography is correct — all 113 of its coordinate zones resolve to a name, and the names are right. The addon tells you *which* mob, *how likely*, *at what level*, and *whether it is an Elite*. Without pfQuest installed everything works except the map pin.
+**Is pfQuest still required?** No. The addon runs fully without it, and it draws no map pins of its own — that is pfQuest's own window, working independently.
+
+What pfQuest still adds when installed:
+
+- **Localized names.** The bundled NPC and zone names are English. On a German client pfQuest supplies German ones.
+- **A fallback for 2,346 equippable items** to which the server's export assigns no source at all. pfQuest names one from the vanilla dataset. Treat those with care — it is exactly the data this addon replaced everywhere else, and some of it describes content this server does not have. Rows from that fallback are marked `(pfQuest)` in `/bll src`.
+
+Its geography was used once, at build time: the zone of every mob was resolved through pfQuest's coordinates and written into `Data/ZoneNames.lua`. At runtime nothing is looked up there.
 
 <details>
 <summary>Why the zone comes from pfQuest and not from the export</summary>
@@ -110,7 +117,7 @@ Sources appear on every item tooltip in the game, not only inside the addon wind
 ## 📦 Installation
 
 1. Extract the `BananaLootline` folder into `<WoW directory>\Interface\AddOns\`.
-2. Optional: install **pfQuest** and **pfQuest-octo** to get map pins for each source. Source lookups themselves work without them.
+2. Optional: install **pfQuest** and **pfQuest-octo**. They are not required — the addon has its own source data. They add localized NPC and zone names on a non-English client, a fallback for items the server's export does not cover, and their own map pins.
    → [pfQuest-octo by roby-brok](https://github.com/roby-brok/pfQuest-octo)
 3. Log in and type `/bll`.
 
@@ -266,8 +273,8 @@ Every piece of feedback improves the addon for everyone. You genuinely matter.
 
 Item, stat and source data from the [OctoWoW database](https://octowow.st/db) (AoWoW-based), exported and converted by `tools/octo_import.py`.
 
-Map positions and zone names from **pfQuest** and its data packages:
-Eric Mauser (Shagu), The Kludge Bureau, paokkerkir — combined in [pfQuest-octo](https://github.com/roby-brok/pfQuest-octo) by Roby_Brok. MIT-licensed. Coordinates are read from `pfDB` at runtime and not redistributed; the zone names in `Data/ZoneNames.lua` are derived from those packages.
+Zone names from **pfQuest** and its data packages:
+Eric Mauser (Shagu), The Kludge Bureau, paokkerkir — combined in [pfQuest-octo](https://github.com/roby-brok/pfQuest-octo) by Roby_Brok. MIT-licensed. The zone names in `Data/ZoneNames.lua` are derived from those packages at build time; nothing else is redistributed. When pfQuest is installed, the addon also reads localized names and fallback sources from `pfDB` at runtime.
 
 Logo: `Images/BananaForge.tga` — 128×128 uncompressed TGA (required by the 1.12 client).
 
