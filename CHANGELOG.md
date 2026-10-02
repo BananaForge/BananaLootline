@@ -2,6 +2,15 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.13
+
+Aus dem Spieltest von 0.22.11: Frostmane Hollow stand jetzt im Wegplan, aber weit hinten — auf turtlelootline.com ganz oben.
+
+- **Die Dropchance dämpft jetzt, statt zu multiplizieren.** Bisher zählte ein Teil mit Zuwachs mal Chance; ein Bossdrop mit 33 % zählte damit nur ein Drittel, eine Questbelohnung voll. turtlelootline.com lässt die Chance ganz weg — ihre Priorität ist die Summe der prozentualen Verbesserungen, und ein 2-%-Drop zählt dort wie ein sicherer. Jetzt gilt die Wurzel der Chance: 33 % zählt 0,58, 20 % zählt 0,45, 2 % noch 0,14, 0,1 % nur 0,03. Brauchbare Bossdrops rücken nach vorn, Seltenes bleibt hinten.
+- **Jäger: die Nahkampfwaffe zählt kaum noch.** Waffen-DPS hatte an Nah- und Fernkampfwaffe dasselbe Gewicht. Rockslicer (Zweihandaxt, 18,2 DPS gegen 2,5 beim Dolch) brachte so rund 47 Punkte und zog die Todesminen über jeden Ort mit Rüstungsupgrades. Geschossen wird mit dem Bogen; an der Nahkampfhand zählt DPS beim Jäger jetzt mit 0,5 statt 3,0. Andere Klassen sind unverändert.
+- Nachgestellt mit der Ausrüstung aus dem Bildschirmfoto: Frostmane Hollow steigt von 7,6 auf 13,2 Punkte und von Platz 5 auf Platz 4, vor die Questgruppe. Davor bleiben die Todesminen (sichere Questbelohnungen: Piercing Axe, Tinkering Belt), die Höhlen des Wehklagens und das Rotkammgebirge.
+- `tools/test_questchoice.lua` rechnet mit der Wurzel; neuer Test `tools/test_meleedps.lua`.
+
 ## 0.22.12
 
 - **Minimap-Knopf mit dem BananaLootline-Logo.** Klick öffnet und schliesst das Fenster, Ziehen verschiebt den Knopf um die Karte; die Position bleibt gespeichert. `/bll minimap` blendet ihn aus und wieder ein. Das Bild liegt als `Images/Minimap.tga` bei, 64 × 64 Pixel mit transparentem Rand. Damit ist der offene Punkt „Es gibt kein Minimap-Symbol" aus 0.22.6 erledigt.
