@@ -211,6 +211,74 @@ Weights.SPECS = {
   },
 }
 
+------------------------------------------------------------------
+-- Eigene Wahl der Spezialisierung
+--
+-- Die Erkennung bleibt der Normalfall. Unter 10 Talentpunkten gibt es
+-- aber nichts zu erkennen, und ein Stufe-15-Jaeger weiss trotzdem, was
+-- er spielen will. Die Wahl liegt pro Charakter in den SavedVariables;
+-- nil heisst automatisch.
+------------------------------------------------------------------
+
+-- Englische Namen fuer die Anzeige. Schluessel bleibt der deutsche.
+Weights.SPEC_EN = {
+  ["Waffen"] = "Arms", ["Furor"] = "Fury", ["Schutz"] = "Protection",
+  ["Heilig"] = "Holy", ["Vergeltung"] = "Retribution",
+  ["Tierherrschaft"] = "Beast Mastery", ["Treffsicherheit"] = "Marksmanship",
+  ["Ueberleben"] = "Survival", ["Meucheln"] = "Assassination",
+  ["Kampf"] = "Combat", ["Taeuschung"] = "Subtlety",
+  ["Disziplin"] = "Discipline", ["Schatten"] = "Shadow",
+  ["Elementar"] = "Elemental", ["Verstaerkung"] = "Enhancement",
+  ["Wiederherstellung"] = "Restoration", ["Arkan"] = "Arcane",
+  ["Feuer"] = "Fire", ["Frost"] = "Frost", ["Gebrechen"] = "Affliction",
+  ["Daemonologie"] = "Demonology", ["Zerstoerung"] = "Destruction",
+  ["Gleichgewicht"] = "Balance", ["Wildheit"] = "Feral",
+}
+
+function Weights:SpecName(name)
+  if BLL.locale ~= "deDE" and self.SPEC_EN[name] then return self.SPEC_EN[name] end
+  return name
+end
+
+function Weights:ChosenSpec()
+  local tab = BananaLootlineChar and BananaLootlineChar.spec
+  local class = BLL.player and BLL.player.class
+  local specs = self.SPECS[class or ""]
+  if tab and specs and specs[tab] then return tab end
+  return nil
+end
+
+function Weights:SetSpec(tab)
+  BananaLootlineChar = BananaLootlineChar or {}
+  BananaLootlineChar.spec = tab
+end
+
+-- Liefert den geltenden Talentbaum und ob er von Hand gewaehlt ist.
+function Weights:ActiveTab()
+  local chosen = self:ChosenSpec()
+  if chosen then return chosen, true end
+  return (self:DetectSpec()), false
+end
+
+-- Talentbaum aus Nummer oder Namensanfang, z.B. "2" oder "tier".
+function Weights:FindSpec(text)
+  local class = BLL.player and BLL.player.class
+  local specs = self.SPECS[class or ""]
+  if not specs or not text then return nil end
+  local n = tonumber(text)
+  if n and specs[n] then return n end
+  local low = string.lower(text)
+  for i = 1, 3 do
+    local de = specs[i] and specs[i].name
+    local en = de and self.SPEC_EN[de]
+    if (de and string.find(string.lower(de), low, 1, true) == 1)
+        or (en and string.find(string.lower(en), low, 1, true) == 1) then
+      return i
+    end
+  end
+  return nil
+end
+
 function Weights:Get()
   -- Nutzerueberschreibung hat Vorrang
   if BananaLootlineDB and BananaLootlineDB.weights then
@@ -223,11 +291,13 @@ function Weights:Get()
   local out = {}
   for k, v in pairs(base) do out[k] = v end
 
-  -- Spezialisierung ueberschreibt einzelne Werte
-  local tab = self:DetectSpec()
+  -- Spezialisierung ueberschreibt einzelne Werte. Die eigene Wahl
+  -- schlaegt die Erkennung.
+  local tab, manual = self:ActiveTab()
   local specs = self.SPECS[class or ""]
+  self.specManual = manual
   if tab and specs and specs[tab] then
-    self.activeSpec = specs[tab].name
+    self.activeSpec = self:SpecName(specs[tab].name)
     for k, v in pairs(specs[tab]) do
       if k ~= "name" then out[k] = v end
     end
