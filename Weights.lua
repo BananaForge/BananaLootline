@@ -45,10 +45,15 @@ Weights.DEFAULTS = {
   --   allgemeine Angriffskraft wirkt auf Nah- UND Fernkampf -> AP = RAP
   --   Staerke bringt nur Nahkampf-AP und ist fuer Jaeger kaum von Nutzen
   -- STA, INT, ARMOR, WEAPON_DPS sind weiter Schaetzwerte.
+  -- MELEE_DPS: die Nahkampfwaffe eines Jaegers ist vor allem Werte-
+  -- traeger, geschossen wird mit dem Bogen. Mit vollem WEAPON_DPS stand
+  -- "Rockslicer" (Zweihandaxt, 18,2 DPS gegen 2,5 beim Dolch) fuer
+  -- rund 47 Punkte im Wegplan und zog die Todesminen ueber jeden Ort
+  -- mit Ruestungsupgrades.
   HUNTER = {
     AGI = 2.5, STR = 0.1, STA = 1.0, INT = 0.3,
     RAP = 1.0, AP = 1.0, CRIT = 32, HIT = 32,
-    ARMOR = 0.02, WEAPON_DPS = 3.0,
+    ARMOR = 0.02, WEAPON_DPS = 3.0, MELEE_DPS = 0.5,
   },
   ROGUE = {
     AGI = 2.5, STR = 1.0, STA = 1.0,
@@ -429,6 +434,9 @@ function Weights:Score(stats, isWeapon, extra)
   for stat, value in pairs(stats) do
     if not (WEAPON_ONLY[stat] and not isWeapon) then
       local weight = w[stat]
+      if stat == "WEAPON_DPS" and isWeapon == "melee" and w["MELEE_DPS"] then
+        weight = w["MELEE_DPS"]
+      end
 
       -- Schulgebundener Zauberschaden ("nur Arkan") zaehlt nur zur
       -- Haelfte: er wirkt bloss auf einen Teil der Zauber. Ohne diese

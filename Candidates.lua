@@ -81,8 +81,10 @@ Cand.INVTYPE_SLOTS = {
   ["INVTYPE_RELIC"]           = { "RangedSlot" },
 }
 
+-- Der Wert sagt Weights:Score, ob Nah- oder Fernkampf: Jaeger gewichten
+-- die Waffen-DPS der Nahkampfhand viel schwaecher als die des Bogens.
 local WEAPON_SLOTS = {
-  ["MainHandSlot"] = true, ["SecondaryHandSlot"] = true, ["RangedSlot"] = true,
+  ["MainHandSlot"] = "melee", ["SecondaryHandSlot"] = "melee", ["RangedSlot"] = "ranged",
 }
 
 ------------------------------------------------------------------
@@ -1108,7 +1110,7 @@ function Cand:GetUpgrades(slotKey, maxResults, accept, maxScan)
           twoHand = true
           local off = BLL.Gear.equipped["SecondaryHandSlot"]
           if off then
-            offHandLoss = BLL.Weights:Score(off.stats, true)
+            offHandLoss = BLL.Weights:Score(off.stats, "melee")
             local offEntry = off.id and cache[off.id]
             if offEntry and offEntry.use then
               offHandLoss = offHandLoss + BLL.Weights:UseEffectScore(offEntry.use)
@@ -1357,12 +1359,26 @@ function Cand:LootlineChanceFloor()
   return Cand.MIN_LOOTLINE_CHANCE
 end
 
+-- Wie stark die Dropchance den Zuwachs eines Teils im Wegplan daempft.
+--
+-- Bis 0.22.12 zaehlte Zuwachs mal Chance, der erwartete Gewinn pro
+-- Besuch. Das bestrafte gute Dungeondrops zu stark: ein Boss mit 33 %
+-- zaehlte ein Drittel, waehrend eine Questbelohnung voll zaehlte - und
+-- in einem Dungeon erlegt man den Boss ohnehin bei jedem Lauf. So stand
+-- Frostmane Hollow mit Belt of Binding (+12, 33 %) fuer einen Stufe-16-
+-- Jaeger weit hinten. turtlelootline.com laesst die Chance ganz weg und
+-- zaehlt einen 2-%-Drop wie einen sicheren.
+--
+-- Die Wurzel liegt dazwischen: 33 % zaehlt 0,58, 20 % zaehlt 0,45,
+-- 2 % noch 0,14 und 0,1 % nur 0,03. Seltenes bleibt hinten, ein
+-- brauchbarer Bossdrop nicht mehr.
 function Cand:ChanceFactor(stype, chance)
   if stype == "Q" or stype == "V" then return 1 end
   if not chance then return 1 end
   local p = chance / 100
   if p > 1 then p = 1 end
-  return p
+  if p < 0 then p = 0 end
+  return math.sqrt(p)
 end
 
 -- Wie viele Kandidaten je Platz der Wegplan hoechstens ansieht, um

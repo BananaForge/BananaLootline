@@ -33,11 +33,12 @@ local ok = true
 local function check(c, msg) if not c then ok = false; print("FEHLER: "..msg) end end
 local byZone = {}
 for i = 1, table.getn(ll) do byZone[ll[i].zone] = ll[i]; print(ll[i].zone, ll[i].priority) end
--- Seenhain: Quest100 max 30 + Quest200 12 (sicher) + Mob 5 x 10 % = 42.5
--- Dungeon: 20 x 5 % + 15 x 3 % = 1.45
+-- Drops zaehlen seit 0.22.13 mit der Wurzel ihrer Chance.
+-- Seenhain: Quest100 max 30 + Quest200 12 (sicher) + Mob 5 x sqrt(0,10) = 43.581
+-- Dungeon: 20 x sqrt(0,05) + 15 x sqrt(0,03) = 7.070
 local function near(a, b) return math.abs(a - b) < 0.001 end
-check(near(byZone["Seenhain"].priority, 42.5), "Seenhain erwartet 42.5, ist " .. byZone["Seenhain"].priority)
-check(near(byZone["Dungeon"].priority, 1.45), "Dungeon erwartet 1.45, ist " .. byZone["Dungeon"].priority)
+check(near(byZone["Seenhain"].priority, 43.5811), "Seenhain erwartet 43.581, ist " .. byZone["Seenhain"].priority)
+check(near(byZone["Dungeon"].priority, 7.0702), "Dungeon erwartet 7.070, ist " .. byZone["Dungeon"].priority)
 check(ll[1].zone == "Seenhain", "Reihenfolge")
 for _, it in ipairs(byZone["Seenhain"].items) do
   print(" ", it.id, it.gain, it.choiceOf, it.choiceBest)
@@ -48,7 +49,7 @@ end
 -- Reihenfolgeunabhaengigkeit: schwaechstes Teil zuletzt vs zuerst
 UPS.HEAD[1].gain, UPS.CHEST[1].gain = 30, 10
 ll = Cand:GetLootline(3)
-for i = 1, table.getn(ll) do if ll[i].zone == "Seenhain" then check(near(ll[i].priority, 42.5), "Umgestellt erwartet 42.5, ist "..ll[i].priority) end end
+for i = 1, table.getn(ll) do if ll[i].zone == "Seenhain" then check(near(ll[i].priority, 43.5811), "Umgestellt erwartet 43.581, ist "..ll[i].priority) end end
 
 -- Rotkammgebirge gegen Westfall wie im Spiel: drei seltene Drops mit
 -- grossem Zuwachs gegen einen haeufigen Drop
@@ -61,7 +62,12 @@ UPS = {
 }
 ll = Cand:GetLootline(3)
 print(ll[1].zone, ll[1].priority, ll[2].zone, ll[2].priority)
-check(ll[1].zone == "Westfall" and near(ll[1].priority, 51.75), "Westfall vorn mit 51.75")
-check(near(ll[2].priority, 4.491), "Rotkamm 4.491")
+check(ll[1].zone == "Westfall" and near(ll[1].priority, 59.7558), "Westfall vorn mit 59.756")
+check(near(ll[2].priority, 28.3213), "Rotkamm 28.321")
 check(Cand:ChanceFactor("V", nil) == 1 and Cand:ChanceFactor("Q", 1) == 1, "Haendler und Quest sicher")
+-- Die Wurzel daempft, statt zu multiplizieren: ein Bossdrop mit 33 %
+-- zaehlt mehr als die Haelfte, ein 2-%-Drop nur noch ein Siebtel.
+check(near(Cand:ChanceFactor("U", 33.33), math.sqrt(0.3333)), "33 % zaehlt 0,58")
+check(Cand:ChanceFactor("U", 2) < 0.15, "2 % zaehlt unter 0,15")
+check(Cand:ChanceFactor("U", 150) == 1, "ueber 100 % gedeckelt")
 print(ok and "ALLE TESTS OK" or "TESTS FEHLGESCHLAGEN")
