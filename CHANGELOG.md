@@ -2,6 +2,14 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.11
+
+Die Diagnose aus 0.22.10 hat den Fehler gefunden. `/bll why 116` meldete für Belt of Binding: im Pool, tragbar, 13,4 Punkte gegen 1,4 beim angelegten Gürtel, Quelle Hailar the Frigid in Frostmane Hollow mit 33 %. Alles richtig — und trotzdem stand es in keiner Liste.
+
+- **Teile, deren Quelle nur der Import kennt, werden nicht mehr nach hinten sortiert.** Die Liste stellt Teile mit Fundort vor Teile ohne. Ob ein Teil einen Fundort hat, wurde aber nur an pfQuest gemessen. pfQuest kennt Belt of Binding nicht — also galt es als „ohne Fundort" und landete hinter allen Teilen, die pfQuest kennt, obwohl der Import seine Quelle seit 0.22.7 führt. Bei sechs Plätzen in „Pro Item" und drei je Platz im Wegplan kam es damit nie vor. Jetzt zählt auch der Import als Fundort.
+- Die Nachstellung hatte das nicht gezeigt, weil sie ohne pfQuest lief: dort kamen alle Teile aus dem Import, und die Sortierung benachteiligte keines. Die beiden Korrekturen aus 0.22.8 und 0.22.9 waren trotzdem nötig, aber nicht die Ursache.
+- Neuer Test `tools/test_importrank.lua` mit einem Teil, das pfQuest kennt, einem, das nur der Import kennt, und einem ohne jede Quelle.
+
 ## 0.22.10
 
 Belt of Binding fehlt im Spiel weiter, obwohl die Nachstellung mit denselben Daten es mit +12 oben zeigt. Der Unterschied liegt in etwas, das nur im Spiel existiert — gespeicherter Itemcache, AtlasLoot oder pfQuest im Client.
