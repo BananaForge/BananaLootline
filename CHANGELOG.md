@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.10
+
+Belt of Binding fehlt im Spiel weiter, obwohl die Nachstellung mit denselben Daten es mit +12 oben zeigt. Der Unterschied liegt in etwas, das nur im Spiel existiert — gespeicherter Itemcache, AtlasLoot oder pfQuest im Client.
+
+- **Neu: `/bll why <itemID>`.** Zeigt für ein Teil, woran es hängt: Eintrag in der Itemdatenbank, ob es im Suchpool liegt und mit welchem Stufenband, den gespeicherten Cache-Eintrag samt Sperrvermerk, ob AtlasLoot eine Ruf- oder Rangbedingung meldet, ob es als tragbar gilt, seine Punktzahl gegen das angelegte Teil und die erste Quelle.
+
 ## 0.22.9
 
 Aus dem zweiten Spieltest: Belt of Binding fehlte weiter, auch in „Pro Item", wo es mit +12 vor Belt of the Fang (+10) hätte stehen müssen.

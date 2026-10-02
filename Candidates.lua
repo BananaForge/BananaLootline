@@ -1570,6 +1570,77 @@ end
 -- Das Stufenband, das die Suche abdeckt. Ohne Argument entscheidet die
 -- gespeicherte Vorausplanung - das ist der Punkt, an dem /bll ahead
 -- ueberhaupt erst auf die Suche wirkt.
+------------------------------------------------------------------
+-- Diagnose: warum steht ein Teil (nicht) in der Liste?
+--
+-- Entstanden, weil "Belt of Binding" im Spiel fehlte, in der
+-- Nachstellung mit denselben Daten aber oben stand. Was zwischen
+-- beiden liegt - gespeicherter Itemcache, AtlasLoot, pfQuest im
+-- Client -, sieht man nur im Spiel. Gibt Zeilen zurueck, keine Texte
+-- fuer den Spieler, deshalb ohne Uebersetzung.
+------------------------------------------------------------------
+
+function Cand:Explain(itemID)
+  local out = {}
+  local function add(t) table.insert(out, t) end
+  local player = BLL.player or {}
+  local level = player.level or 60
+
+  local db = BLL.ItemDB and BLL.ItemDB:Get(itemID)
+  if db then
+    local n = 0
+    for _ in pairs(db.stats or {}) do n = n + 1 end
+    add("ItemDB: " .. (db.name or "?") .. " slot=" .. tostring(db.slot)
+      .. " req=" .. tostring(db.reqlevel) .. " ilvl=" .. tostring(db.ilvl)
+      .. " class=" .. tostring(db.itemclass) .. "/" .. tostring(db.subclass)
+      .. " stats=" .. n)
+  else
+    add("ItemDB: -")
+  end
+
+  if not self.pool then
+    add("pool: noch keine Suche gelaufen / no search yet")
+  else
+    add("pool: " .. (self.pool[itemID] and ("ja/yes " .. self.pool[itemID]) or "NEIN/NO")
+      .. ((self.fromImport and self.fromImport[itemID]) and " (import)" or "")
+      .. "  band " .. table.concat({ self:Band() }, "-"))
+  end
+
+  local c = BananaLootlineDB.itemcache and BananaLootlineDB.itemcache[itemID]
+  if not c then
+    add("cache: -")
+  else
+    local parts = {}
+    for _, k in ipairs({ "skip", "pre", "fail", "db", "cv", "r", "e", "a", "ic", "sc", "cm" }) do
+      if c[k] ~= nil then table.insert(parts, k .. "=" .. tostring(c[k])) end
+    end
+    add("cache: " .. table.concat(parts, " "))
+    if c.lock then add("cache lock: " .. tostring(c.lock)) end
+    local atlas = self:AtlasRestriction(itemID)
+    if atlas then add("AtlasLoot: " .. atlas) end
+    add("usable: " .. tostring(self:IsUsable(c, player.class, level,
+      AllowedArmor(player.class, level), itemID)))
+    local slots = self.INVTYPE_SLOTS[c.e or ""]
+    if slots and BLL.Weights and BLL.Gear then
+      local isWeapon = WEAPON_SLOTS[slots[1]]
+      local eq = BLL.Gear.equipped[slots[1]]
+      local base = eq and BLL.Weights:Score(eq.stats, isWeapon) or 0
+      add(string.format("score %.1f vs %s %.1f", BLL.Weights:Score(c.st, isWeapon),
+        slots[1], base))
+    end
+  end
+
+  local src = BLL.Sources and BLL.Sources:GetItemSources(itemID)
+  if not src or table.getn(src) == 0 then
+    add("sources: -")
+  else
+    local s1 = src[1]
+    add("sources: " .. table.getn(src) .. ", " .. tostring(s1.name) .. " "
+      .. tostring(s1.chance) .. "% " .. tostring(s1.zone))
+  end
+  return out
+end
+
 function Cand:Band(span)
   span = span or self:PlanAhead()
   local level = (BLL.player and BLL.player.level) or 60

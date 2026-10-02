@@ -17,7 +17,7 @@ local L = BLL.L
 -- wird die Version in der TOC; BLL:Version() liest sie von dort.
 -- Bis 0.22.5 stand hier eine zweite, von Hand gepflegte Nummer, und
 -- sie lief auseinander: die TOC sagte 0.22.5, der Selbsttest 0.21.1.
-BLL.VERSION_FALLBACK = "0.22.9"
+BLL.VERSION_FALLBACK = "0.22.10"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -600,6 +600,18 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       BLL:Print(string.format(L["RATE_INFO"], BananaLootlineDB.queryRate or 8))
     end
 
+  elseif command == "why" then
+    local id = tonumber(param)
+    if not id then
+      BLL:Print(L["USAGE_WHY"])
+    else
+      BLL:Print(string.format(L["WHY_HEADER"], id))
+      local lines = BLL.Candidates:Explain(id)
+      for i = 1, table.getn(lines) do
+        DEFAULT_CHAT_FRAME:AddMessage("   " .. lines[i])
+      end
+    end
+
   elseif command == "forget" then
     BananaLootlineDB.itemcache = {}
     BLL.Candidates.pool = nil
@@ -799,6 +811,7 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       { "/bll forget",          "HELP_FORGET"     },
       { "/bll spec",            "HELP_SPEC"       },
       { "/bll spec <1-3|auto>", "HELP_SPEC_SET"   },
+      { "/bll why <itemID>",    "HELP_WHY"        },
       { "/bll ahead <n>",       "HELP_AHEAD"      },
       { "/bll cat <zone> <cat>","HELP_CAT"        },
       { "/bll unused",          "HELP_UNUSED"     },
