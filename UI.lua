@@ -1531,6 +1531,10 @@ function UI:BuildDetailPane()
         GameTooltip:ClearLines()
         BLL.UI:FallbackTooltip(GameTooltip, this.itemID)
       end
+      if this.questID then
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(BLL.L["QI_CLICK"], 1, 0.82, 0)
+      end
       GameTooltip:Show()
     end)
     row:SetScript("OnLeave", function() this.hl:Hide(); GameTooltip:Hide() end)
@@ -1541,6 +1545,9 @@ function UI:BuildDetailPane()
       if IsShiftKeyDown() and ChatFrameEditBox and ChatFrameEditBox:IsVisible() then
         local _, link = GetItemInfo(this.itemID)
         if link then ChatFrameEditBox:Insert(link) end
+      elseif this.questID and BLL.QuestInfo then
+        GameTooltip:Hide()
+        BLL.QuestInfo:Show(this.questID, this.itemID)
       end
     end)
 
@@ -1646,6 +1653,10 @@ function UI:BuildDetailPane()
           GameTooltip:ClearLines()
           BLL.UI:FallbackTooltip(GameTooltip, this.itemID)
         end
+        if this.questID then
+          GameTooltip:AddLine(" ")
+          GameTooltip:AddLine(BLL.L["QI_CLICK"], 1, 0.82, 0)
+        end
         GameTooltip:Show()
 
       elseif this.enchant then
@@ -1685,6 +1696,12 @@ function UI:BuildDetailPane()
       if this.enchant then
         GameTooltip:Hide()
         BLL.UI:OpenCrafters(this.enchant)
+      elseif this.itemID and IsShiftKeyDown() and ChatFrameEditBox and ChatFrameEditBox:IsVisible() then
+        local _, link = GetItemInfo(this.itemID)
+        if link then ChatFrameEditBox:Insert(link) end
+      elseif this.questID and BLL.QuestInfo then
+        GameTooltip:Hide()
+        BLL.QuestInfo:Show(this.questID, this.itemID)
       end
     end)
 
@@ -1767,6 +1784,7 @@ end
 function UI:FillRow(row, e)
   local pane = self.detail
   row.itemID = e.itemID
+  row.questID = e.questID
   row.enchant = e.enchant
   row:SetHeight(e.h)
 
@@ -1832,6 +1850,7 @@ function UI:RenderList()
     local row = pane.llRows[i]
     row:Hide()
     row.itemID = nil
+    row.questID = nil
     row.enchant = nil
   end
 
@@ -1988,6 +2007,7 @@ function UI:ShowLootline()
 
       table.insert(list, {
         itemID = it.id, h = H_ITEM, step = S_ITEM,
+        questID = it.questID,
         pre  = "|cff888888" .. it.slotName .. "|r  " .. tag .. hex,
         core = it.name or "?",
         post = "|r" .. chance,
@@ -2199,6 +2219,7 @@ function UI:ShowDetail(slotKey)
   for i = 1, table.getn(pane.rows) do
     pane.rows[i]:Hide()
     pane.rows[i].itemID = nil
+    pane.rows[i].questID = nil
   end
   sv.status:SetText("")
   sv.secUp.right:SetText("")
@@ -2243,6 +2264,9 @@ function UI:ShowDetail(slotKey)
     local u = ups[i]
     local row = pane.rows[i]
     row.itemID = u.id
+    -- Questbelohnung: Klick zeigt die Questreihe
+    local s1 = u.sources and u.sources[1]
+    row.questID = (s1 and s1.stype == "Q") and s1.id or nil
 
     local qc = QUALITY_COLOR[u.quality or 1]
     local hex = string.format("|cff%02x%02x%02x", qc[1] * 255, qc[2] * 255, qc[3] * 255)

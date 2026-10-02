@@ -2,6 +2,15 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.14
+
+- **Klick auf eine Questbelohnung zeigt die ganze Questreihe.** In der Lootline und unter „Pro Item" öffnet ein Klick auf ein Teil mit „Quest" ein Fenster: alle Vorquests in der richtigen Reihenfolge bis zur Quest mit der Belohnung, je Schritt mit Name, Mindeststufe (orange, solange man sie nicht hat), Questlevel, Questgeber mit Zone und Koordinaten, Abgabe-NPC, falls ein anderer, und dem Questziel. Bei einer Auswahlbelohnung stehen darunter alle Teile, zwischen denen man wählt, das angeklickte grün markiert. Mit pfQuest zeigt „Auf Karte zeigen" den Anfang der Reihe auf der Karte.
+- Beispiele: Tunic of Westfall gehört zu einer 7-teiligen Reihe „The Defias Brotherhood", die bei Gryan Stoutmantle in Westfall (56, 48) anfängt und über Wiley the Black im Rotkammgebirge und Mathias Shaw in Sturmwind führt. Tinkering Belt aus „The Harvest Golem Mystery" ist der neunte Schritt einer OctoWoW-eigenen Reihe bei Christopher Hewen in Sentinel Hill.
+- Bei mehreren möglichen Vorquests gilt die, die die eigene Rasse annehmen darf; gibt es dann noch eine, steht ein Hinweis dabei.
+- **Neu: `Data/QuestData.lua`**, erzeugt von `tools/quest_import.lua` aus pfQuest, pfQuest-turtle und pfQuest-octo: 3321 Quests (alle, die Gegenstände belohnen, plus ihre Vorquests) mit Geber, Abgabe, Stufen und Ziel, dazu 1283 NPCs mit Ort. 590 KB. Funktioniert auch ohne pfQuest im Client; fehlt eine Quest dort, gilt, was der Import weiss.
+- Shift-Klick hängt weiterhin den Itemlink in den Chat, jetzt auch in der Lootline.
+- Neuer Test `tools/test_questinfo.lua` an den echten Daten.
+
 ## 0.22.13
 
 Aus dem Spieltest von 0.22.11: Frostmane Hollow stand jetzt im Wegplan, aber weit hinten — auf turtlelootline.com ganz oben.
