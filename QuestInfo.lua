@@ -209,7 +209,9 @@ function QI:Frame()
   f:RegisterForDrag("LeftButton")
   f:SetScript("OnDragStart", function() this:StartMoving() end)
   f:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-  f:SetFrameStrata("DIALOG")
+  -- Eine Stufe ueber dem Hauptfenster (DIALOG), sonst liegt das
+  -- Fenster bei gleicher Ebene dahinter.
+  f:SetFrameStrata("FULLSCREEN_DIALOG")
   tinsert(UISpecialFrames, "BananaLootlineQuestFrame")
 
   local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -260,6 +262,24 @@ function QI:ShowOnMap()
   if not ok then BLL:Print(BLL.L["QI_NOMAP"]) end
 end
 
+-- Links neben dem Hauptfenster, oben buendig. Reicht der Platz links
+-- nicht, rechts daneben; ist das Hauptfenster zu, in die Bildmitte.
+function QI:Place(f)
+  local main = BananaLootlineFrame
+  f:ClearAllPoints()
+  if not (main and main:IsVisible()) then
+    f:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
+    return
+  end
+  local left = (main:GetLeft() or 0) * main:GetEffectiveScale()
+  local need = f:GetWidth() * f:GetEffectiveScale()
+  if left >= need then
+    f:SetPoint("TOPRIGHT", main, "TOPLEFT", 2, 0)
+  else
+    f:SetPoint("TOPLEFT", main, "TOPRIGHT", -2, 0)
+  end
+end
+
 function QI:Show(qid, itemID)
   if not qid then return end
   local f = self:Frame()
@@ -274,5 +294,6 @@ function QI:Show(qid, itemID)
   local h = (f.body:GetHeight() or 100) + 100
   if h < 160 then h = 160 end
   f:SetHeight(h)
+  self:Place(f)
   f:Show()
 end
