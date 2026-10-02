@@ -939,7 +939,11 @@ function Cand:IsUsable(entry, class, level, allowedArmor, itemID)
   return true
 end
 
-function Cand:GetUpgrades(slotKey, maxResults)
+-- accept (optional): wird mit jedem Kandidaten aufgerufen, nachdem
+-- seine Quellen aufgeloest sind. Was abgelehnt wird, zaehlt nicht gegen
+-- maxResults; dann rueckt der naechste nach. Hoechstens maxScan
+-- Kandidaten werden dafuer angesehen, weil die Quellensuche kostet.
+function Cand:GetUpgrades(slotKey, maxResults, accept, maxScan)
   if not self.pool then return nil end
 
   maxResults = maxResults or 5
@@ -1177,9 +1181,11 @@ function Cand:GetUpgrades(slotKey, maxResults)
   local trimmed = {}
   local taken, i, n = 0, 1, table.getn(out)
 
-  while taken < maxResults and i <= n do
+  local scanned = 0
+  while taken < maxResults and i <= n and (not maxScan or scanned < maxScan) do
     local u = out[i]
     i = i + 1
+    scanned = scanned + 1
 
     local entry = cache[u.id]
     if entry and entry.lock == nil then
@@ -1205,8 +1211,10 @@ function Cand:GetUpgrades(slotKey, maxResults)
       if not u.sources or table.getn(u.sources) == 0 then
         u.noSource = true
       end
-      table.insert(trimmed, u)
-      taken = taken + 1
+      if not accept or accept(u) then
+        table.insert(trimmed, u)
+        taken = taken + 1
+      end
     end
   end
 
@@ -1330,6 +1338,53 @@ function Cand:ChanceFactor(stype, chance)
   return p
 end
 
+-- Wie viele Kandidaten je Platz der Wegplan hoechstens ansieht, um
+-- maxPerSlot mit Fundort zu finden.
+Cand.LOOTLINE_SCAN = 40
+
+------------------------------------------------------------------
+-- Die Quelle, ueber die ein Teil im Wegplan steht, oder nil.
+--
+-- Der Wegplan gruppiert nach Zone. Hat die beste Quelle keinen Ort,
+-- eine schlechtere aber schon, dann ist die schlechtere hier die
+-- brauchbare: ein Ziel mit halber Chance schlaegt eines, zu dem
+-- niemand hinfindet. In der Einzelansicht bleibt es bei der
+-- Reihenfolge nach Chance. Betrifft 301 Gegenstaende.
+------------------------------------------------------------------
+
+function Cand:LootlineSource(item)
+  if not item.sources or table.getn(item.sources) == 0 then return nil end
+  local best = item.sources[1]
+  if not best.zone then
+    for i = 2, table.getn(item.sources) do
+      if item.sources[i].zone then best = item.sources[i]; break end
+    end
+  end
+  local stype = best.stype
+
+  -- Haendlerware nur auf Wunsch. Sie ist sicher zu bekommen und
+  -- bekommt deshalb den vollen Zuwachs angerechnet, waehrend ein
+  -- Dungeondrop mit seiner Chance multipliziert wird. In einer
+  -- gemeinsamen Liste steht der Haendler damit immer oben und
+  -- verdraengt jedes Ziel, zu dem man tatsaechlich hingehen wuerde.
+  if stype == "V" and not (BananaLootlineDB and BananaLootlineDB.showVendors) then
+    return nil
+  end
+
+  -- Ohne Ort kein Wegplan. Eine Sammelgruppe "kein Fundort"
+  -- beantwortet die Frage "wohin soll ich gehen" nicht und stand
+  -- nur im Weg. Quests bleiben, auch wenn ihr Geber unbekannt ist -
+  -- "Quests" ist eine brauchbare Auskunft.
+  if not best.zone and stype ~= "Q" then return nil end
+
+  -- Zu unwahrscheinlich, um dafuer loszulaufen.
+  if stype ~= "Q" and stype ~= "V" and best.chance
+     and best.chance < self:LootlineChanceFloor() then
+    return nil
+  end
+  return best
+end
+
 function Cand:GetLootline(maxPerSlot)
   if not self.pool then return nil end
   maxPerSlot = maxPerSlot or 3
@@ -1348,7 +1403,13 @@ function Cand:GetLootline(maxPerSlot)
 
   for i = 1, table.getn(BLL.Gear.SLOTS) do
     local slot = BLL.Gear.SLOTS[i]
-    local ups, baseScore = self:GetUpgrades(slot.key, maxPerSlot)
+    -- Nur Kandidaten, zu denen ein Weg fuehrt. Frueher kamen die drei
+    -- besten je Platz herein und erst danach flogen die ohne Ort
+    -- heraus - beim Guertel eines Stufe-16-Jaegers waren das drei
+    -- hergestellte oder unverortete Teile, und "Belt of Binding" aus
+    -- Frostmane Hollow (33 %) kam nie in Betracht.
+    local ups, baseScore = self:GetUpgrades(slot.key, maxPerSlot,
+      function(u) return Cand:LootlineSource(u) ~= nil end, Cand.LOOTLINE_SCAN)
 
     for u = 1, table.getn(ups or {}) do
       local item = ups[u]
@@ -1357,22 +1418,11 @@ function Cand:GetLootline(maxPerSlot)
       -- Nur einmal zaehlen, sonst wird der Ort doppelt gewichtet.
       -- Ein Item, dessen einzige Quelle ein Entwicklereintrag ist,
       -- gehoert nicht in einen Wegplan: man kann es nicht bekommen.
-      local hasSource = item.sources and table.getn(item.sources) > 0
-
-      -- Der Wegplan gruppiert nach Zone. Hat die beste Quelle keinen
-      -- Ort, eine schlechtere aber schon, dann ist die schlechtere hier
-      -- die brauchbare: ein Ziel mit halber Chance schlaegt eines, zu
-      -- dem niemand hinfindet. In der Einzelansicht bleibt es bei der
-      -- Reihenfolge nach Chance. Betrifft 301 Gegenstaende.
+      local best = self:LootlineSource(item)
+      local hasSource = best ~= nil
       local zone, sourceName, chance, stype, questLevel, questID
       local elite, sourceLevel
-      if item.sources and table.getn(item.sources) > 0 then
-        local best = item.sources[1]
-        if not best.zone then
-          for i = 2, table.getn(item.sources) do
-            if item.sources[i].zone then best = item.sources[i]; break end
-          end
-        end
+      if best then
         elite = best.elite
         sourceLevel = best.level
         zone = best.zone
@@ -1381,29 +1431,6 @@ function Cand:GetLootline(maxPerSlot)
         stype = best.stype
         questLevel = best.questLevel
         if stype == "Q" then questID = best.id end
-      end
-
-      -- Haendlerware nur auf Wunsch. Sie ist sicher zu bekommen und
-      -- bekommt deshalb den vollen Zuwachs angerechnet, waehrend ein
-      -- Dungeondrop mit seiner Chance multipliziert wird. In einer
-      -- gemeinsamen Liste steht der Haendler damit immer oben und
-      -- verdraengt jedes Ziel, zu dem man tatsaechlich hingehen wuerde.
-      if stype == "V" and not (BananaLootlineDB and BananaLootlineDB.showVendors) then
-        hasSource = false
-      end
-
-      -- Ohne Ort kein Wegplan. Eine Sammelgruppe "kein Fundort"
-      -- beantwortet die Frage "wohin soll ich gehen" nicht und stand
-      -- nur im Weg. Quests bleiben, auch wenn ihr Geber unbekannt ist -
-      -- "Quests" ist eine brauchbare Auskunft.
-      if not zone and stype ~= "Q" then
-        hasSource = false
-      end
-
-      -- Zu unwahrscheinlich, um dafuer loszulaufen.
-      if stype ~= "Q" and stype ~= "V" and chance
-         and chance < self:LootlineChanceFloor() then
-        hasSource = false
       end
 
       if not seenItem[item.id] and hasSource then
