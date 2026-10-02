@@ -2,6 +2,10 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.15
+
+- **Das Questfenster öffnet links neben dem Hauptfenster und liegt davor.** Es lag auf derselben Ebene wie das Hauptfenster und erschien dahinter. Jetzt eine Ebene höher, oben bündig links daneben; reicht der Platz links nicht, rechts daneben. Ist das Hauptfenster zu, in der Bildmitte.
+
 ## 0.22.14
 
 - **Klick auf eine Questbelohnung zeigt die ganze Questreihe.** In der Lootline und unter „Pro Item" öffnet ein Klick auf ein Teil mit „Quest" ein Fenster: alle Vorquests in der richtigen Reihenfolge bis zur Quest mit der Belohnung, je Schritt mit Name, Mindeststufe (orange, solange man sie nicht hat), Questlevel, Questgeber mit Zone und Koordinaten, Abgabe-NPC, falls ein anderer, und dem Questziel. Bei einer Auswahlbelohnung stehen darunter alle Teile, zwischen denen man wählt, das angeklickte grün markiert. Mit pfQuest zeigt „Auf Karte zeigen" den Anfang der Reihe auf der Karte.

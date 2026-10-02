@@ -57,4 +57,22 @@ print(text)
 -- Unbekannte Quest: kein Absturz
 local t2 = QI:Text(99999999)
 check(t2 and string.find(t2, "keine Einzelheiten", 1, true), "unbekannte Quest wird gemeldet")
+-- Lage: links neben dem Hauptfenster, sonst rechts, ohne Hauptfenster mittig
+local function fr(left, visible)
+  return { pts = nil, ClearAllPoints = function(self) self.pts = nil end,
+           SetPoint = function(self, a, rel, b) self.pts = { a, rel, b } end,
+           GetLeft = function() return left end, IsVisible = function() return visible end,
+           GetEffectiveScale = function() return 1 end, GetWidth = function() return 420 end }
+end
+local qf = fr(0, true)
+BananaLootlineFrame = fr(600, true)
+QI:Place(qf)
+check(qf.pts[1] == "TOPRIGHT" and qf.pts[2] == BananaLootlineFrame and qf.pts[3] == "TOPLEFT",
+  "links neben dem Hauptfenster")
+BananaLootlineFrame = fr(100, true)
+QI:Place(qf)
+check(qf.pts[1] == "TOPLEFT" and qf.pts[3] == "TOPRIGHT", "rechts, wenn links kein Platz ist")
+BananaLootlineFrame = fr(600, false)
+QI:Place(qf)
+check(qf.pts[1] == "CENTER", "mittig ohne Hauptfenster")
 print(ok and "ALLE TESTS OK" or "TESTS FEHLGESCHLAGEN")
