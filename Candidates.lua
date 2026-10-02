@@ -374,7 +374,7 @@ function Cand:StartIndex(minLvl, maxLvl)
 
   self.pool       = {}
   self.poolSize   = 0
-  self.fromImport = {}    -- [itemID] = 1, wenn pfQuest das Item nicht kennt
+  self.fromImport = {}    -- [itemID] = 1, wenn weder pfQuest noch der Import eine Quelle kennen
   self.pfqCount   = 0
   self.importCount = 0
   self.state    = "indexing"
@@ -486,10 +486,19 @@ function Cand:ImportChunk()
         -- 65 in der Anzeige, obwohl es ab 60 tragbar ist.
         self.pool[key] = effReq
         self.poolSize  = self.poolSize + 1
-        -- Nur wenn pfQuest das Item ueberhaupt nicht fuehrt, fehlt der
-        -- Fundort wirklich. Kennt pfQuest es und lag nur die Stufe
-        -- daneben, sind die Quellen weiterhin abrufbar.
-        if not (pfItems and pfItems[key]) then
+        -- Nur wenn weder pfQuest noch der Import das Item als Quelle
+        -- fuehren, fehlt der Fundort wirklich. Kennt pfQuest es und lag
+        -- nur die Stufe daneben, sind die Quellen weiterhin abrufbar.
+        --
+        -- Den Import nicht zu fragen war der Grund, warum "Belt of
+        -- Binding" im Spiel nie erschien: pfQuest kennt das Teil nicht,
+        -- also galt es als "ohne Fundort" und wurde hinter alle Teile
+        -- sortiert, die pfQuest kennt - obwohl der Import Hailar the
+        -- Frigid in Frostmane Hollow mit 33 % fuehrt und das Teil mit +12
+        -- das beste Guertel-Upgrade war. In der Nachstellung ohne pfQuest
+        -- fiel das nicht auf, weil dort alle Teile aus dem Import kamen.
+        local imported = BLL.Sources and BLL.Sources.imported
+        if not (pfItems and pfItems[key]) and not (imported and imported[key]) then
           self.fromImport[key] = 1
           self.importCount = self.importCount + 1
         end
@@ -1602,7 +1611,7 @@ function Cand:Explain(itemID)
     add("pool: noch keine Suche gelaufen / no search yet")
   else
     add("pool: " .. (self.pool[itemID] and ("ja/yes " .. self.pool[itemID]) or "NEIN/NO")
-      .. ((self.fromImport and self.fromImport[itemID]) and " (import)" or "")
+      .. ((self.fromImport and self.fromImport[itemID]) and " (ohne Fundort/no source, sortiert hinten)" or "")
       .. "  band " .. table.concat({ self:Band() }, "-"))
   end
 
