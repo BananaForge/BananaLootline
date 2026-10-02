@@ -560,7 +560,7 @@ function UI:Init()
   credit:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 14)
   credit:SetJustifyH("RIGHT")
   credit:SetTextColor(0.55, 0.55, 0.55)
-  credit:SetText("v" .. (BLL:Version() or "?") .. "  |cffffcc33\194\169 Lumihunt|r")
+  credit:SetText("v" .. ((BLL.Version and BLL:Version()) or "?") .. "  |cffffcc33\194\169 Lumihunt|r")
   self.credit = credit
 
   self.frame = f
