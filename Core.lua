@@ -13,7 +13,11 @@ BananaLootline = BananaLootline or {}
 local BLL = BananaLootline
 local L = BLL.L
 
-BLL.VERSION = "0.21.1"
+-- Letzte Zuflucht, falls GetAddOnMetadata nichts liefert. Gepflegt
+-- wird die Version in der TOC; BLL:Version() liest sie von dort.
+-- Bis 0.22.5 stand hier eine zweite, von Hand gepflegte Nummer, und
+-- sie lief auseinander: die TOC sagte 0.22.5, der Selbsttest 0.21.1.
+BLL.VERSION_FALLBACK = "0.22.6"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -127,7 +131,7 @@ frame:SetScript("OnEvent", function()
     BLL.pendingInitialScans = { 4, 12 }
     BLL.initialScanTimer = 0
 
-    BLL:Print(L["LOADED"] .. " |cff666666(v" .. BLL.VERSION .. ")|r")
+    BLL:Print(L["LOADED"] .. " |cff666666(v" .. (BLL:Version() or "?") .. ")|r")
     if BLL.migrated then
       BLL:Print(L["MIGRATED"])
     end
@@ -227,11 +231,33 @@ end)
 
 local function Mark(good) return good and "|cff00ff00OK|r" or "|cffff0000!!|r" end
 
+------------------------------------------------------------------
+-- Version und Zaehlhilfe
+--
+-- Die Version steht in der TOC und wird von dort gelesen, damit sie
+-- nicht an zwei Stellen gepflegt werden muss und nie auseinanderlaeuft.
+------------------------------------------------------------------
+
+function BLL:Version()
+  if GetAddOnMetadata then
+    local v = GetAddOnMetadata("BananaLootline", "Version")
+    if v and v ~= "" then return v end
+  end
+  return BLL.VERSION_FALLBACK
+end
+
+function BLL:Count(t)
+  if type(t) ~= "table" then return 0 end
+  local n = 0
+  for _ in pairs(t) do n = n + 1 end
+  return n
+end
+
 function BLL:SelfTest()
   local out = DEFAULT_CHAT_FRAME
   local warn = 0
 
-  self:Print("|cffffcc33" .. string.format(L["ST_TITLE"], self.VERSION) .. "|r")
+  self:Print("|cffffcc33" .. string.format(L["ST_TITLE"], self:Version() or "?") .. "|r")
 
   ----------------------------------------------------------------
   -- Sprachen
@@ -650,11 +676,94 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
     end
 
   elseif command == "info" then
+    -- Die Version zuerst. Ohne sie laesst sich keine Fehlermeldung
+    -- einordnen: ein Tester schrieb "I updated addons early 30/9, idk
+    -- if u pushed another update in the meantime" - und an dem Tag
+    -- gab es fuenf Fassungen.
+    BLL:Print("|cffffcc33" .. L["ADDON_NAME"] .. " "
+      .. (BLL:Version() or "?") .. "|r")
     BLL:Print(string.format(L["INFO_LINE"],
       BLL.Sources.available and L["YES"] or L["NO"],
       (BLL.ItemDB and BLL.ItemDB.loaded)
         and (BLL.ItemDB.count .. " Items") or L["ITEMDB_NONE"],
       BLL.locale))
+    BLL:Print(string.format(L["INFO_DATA"],
+      BLL:Count(BananaLootlineSourceData),
+      BLL:Count(BananaLootlineNpcNames),
+      BLL:Count(BananaLootlineZoneNames)))
+    if BLL.Phases then
+      local open, total = 0, table.getn(BLL.Phases.PHASES)
+      for i = 1, total do
+        if BLL.Phases:PhaseOpen(BLL.Phases.PHASES[i].phase) then open = open + 1 end
+      end
+      BLL:Print(string.format(L["INFO_PHASE"], open, total,
+        BLL.Phases:LockedZoneCount()))
+    end
+
+  elseif command == "phase" then
+    -- Welche Instanzen sind offen? Und wenn der Server von der Roadmap
+    -- abweicht, laesst sich jede Phase hier umstellen. Die eigene Angabe
+    -- schlaegt den Termin.
+    local P = BLL.Phases
+    local _, _, num, what = string.find(param or "", "^(%d+)%s+(%a+)$")
+    if P and num then
+      num = tonumber(num)
+      if what == "on" then
+        P:Set(num, true)
+        BLL:Print(string.format(L["PHASE_SET"], num, L["PHASE_OPEN"]))
+      elseif what == "off" then
+        P:Set(num, false)
+        BLL:Print(string.format(L["PHASE_SET"], num, L["PHASE_CLOSED"]))
+      else
+        P:Set(num, nil)
+        BLL:Print(string.format(L["PHASE_AUTO"], num))
+      end
+    elseif P then
+      BLL:Print(L["PHASE_HEADER"])
+      if not P.Today() then BLL:Print(L["PHASE_NODATE"]) end
+      local own = BananaLootlineDB and BananaLootlineDB.phaseOpen
+      for i = 1, table.getn(P.PHASES) do
+        local ph = P.PHASES[i]
+        -- Reine Daten: Nummer, Termin, Instanzname aus dem Datenbestand.
+        -- Nur der Zustand wird uebersetzt, deshalb direkt ins Chatfenster
+        -- wie bei /bll zone.
+        local state = P:PhaseOpen(ph.phase)
+          and ("|cff44ff44" .. L["PHASE_OPEN"] .. "|r")
+          or  ("|cffff4444" .. L["PHASE_CLOSED"] .. "|r")
+        if own and own[ph.phase] ~= nil then
+          state = state .. " |cff888888(" .. L["PHASE_BYHAND"] .. ")|r"
+        end
+        DEFAULT_CHAT_FRAME:AddMessage("   |cff888888" .. ph.phase .. "|r  "
+          .. P:DateText(ph) .. "  " .. ph.key .. "  " .. state)
+      end
+      BLL:Print(L["USAGE_PHASE"])
+    end
+
+  elseif command == "zone" then
+    -- Orte benennen, die weder pfQuest noch der Import kennt. Im
+    -- Wegplan stehen die als "Zone 5557"; wer weiss, welche Instanz
+    -- das ist, traegt den Namen hier ein.
+    local _, _, zid, zname = string.find(param or "", "^(%d+)%s+(.+)$")
+    if zid then
+      BananaLootlineDB.zoneNames = BananaLootlineDB.zoneNames or {}
+      BananaLootlineDB.zoneNames[tonumber(zid)] = zname
+      BLL:Print(string.format(L["ZONE_SET"], zid, zname))
+    elseif param and string.find(param, "^%d+$") then
+      BananaLootlineDB.zoneNames = BananaLootlineDB.zoneNames or {}
+      BananaLootlineDB.zoneNames[tonumber(param)] = nil
+      BLL:Print(string.format(L["ZONE_CLEARED"], param))
+    else
+      BLL:Print(L["USAGE_ZONE"])
+      local own = BananaLootlineDB.zoneNames
+      if own then
+        -- Reine Daten, keine Meldung: Nummer und Name, beides
+        -- sprachneutral. Deshalb direkt ins Chatfenster wie bei
+        -- /bll src, nicht ueber BLL:Print.
+        for id, nm in pairs(own) do
+          DEFAULT_CHAT_FRAME:AddMessage("   |cff888888" .. id .. "|r  " .. nm)
+        end
+      end
+    end
 
   elseif command == "help" then
     -- Befehl und Beschreibung getrennt: der Befehl ist sprachneutral,
@@ -680,6 +789,8 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       { "/bll item <id>",       "HELP_ITEM"       },
       { "/bll hooks",           "HELP_HOOKS"      },
       { "/bll selftest",        "HELP_SELFTEST"   },
+      { "/bll zone <id> <name>", "HELP_ZONE"      },
+      { "/bll phase",           "HELP_PHASE"      },
       { "/bll src <id>",        "HELP_SRC"        },
       { "/bll set <id>",        "HELP_SET"        },
       { "/bll usecd <s>",       "HELP_USECD"      },
