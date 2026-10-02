@@ -272,6 +272,34 @@ function Sources:QuestClassMask(questID)
   return q and q.c or nil
 end
 
+-- Liegen alle Quellen eines Teils in Inhalten, die auf dem Server
+-- noch nicht offen sind? Dann gehoert es in keine Liste.
+--
+-- Die Phasensperre entfernte bisher nur die Quellen. Das Teil selbst
+-- blieb in "Pro Item" stehen, mit "Keine Quellendaten": ein Tester auf
+-- Stufe 60 bekam fast nur Teile aus Naxxramas, AQ40, BWL und dem Rock
+-- of Desolation vorgeschlagen - alle gesperrt.
+--
+-- Nur wenn jede Quelle einen Ort hat und jeder Ort gesperrt ist. Eine
+-- Quelle ohne Ort oder eine Herstellung laesst das Teil drin; dann
+-- weiss das Addon zu wenig, um es wegzulassen.
+function Sources:OnlyLockedSources(itemID)
+  if not BLL.Phases or not self.imported or not itemID then return false end
+  local e = self.imported[itemID]
+  if type(e) ~= "table" then return false end
+  if e.c then return false end
+  local any = false
+  for _, key in ipairs({ "d", "v", "q", "o" }) do
+    local rows = e[key]
+    for i = 1, table.getn(rows or {}) do
+      local z = rows[i].z
+      if not z or BLL.Phases:IsOpen(z) then return false end
+      any = true
+    end
+  end
+  return any
+end
+
 function Sources:IsReachable(entry)
   -- Quest der Gegenfraktion: existiert, aber nicht fuer diesen Charakter
   if entry.stype == "Q" and not self:RaceAllows(entry.questRace) then

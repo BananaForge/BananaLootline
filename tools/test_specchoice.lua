@@ -65,9 +65,22 @@ W:SetSpec(1)
 W:Get()
 check(W.activeSpec == "Discipline", "englischer Anzeigename")
 
+-- 7b. Eigene Gewichte: die Spec wird trotzdem erkannt und angezeigt
+BLL.locale = "deDE"
+BananaLootlineDB.weights = { AGI = 1 }
+W:SetSpec(3)
+local cw = W:Get()
+check(cw.AGI == 1 and cw.SPELLPOWER_SHADOW == nil, "eigene Gewichte gelten")
+check(W.activeSpec == "Schatten", "Spec bleibt sichtbar, ist " .. tostring(W.activeSpec))
+check(W.customWeights, "eigene Gewichte sind markiert")
+BananaLootlineDB.weights = nil
+W:Get()
+check(not W.customWeights, "ohne eigene Gewichte keine Markierung")
+
 -- 8. Texte vorhanden in beiden Sprachen
 for _, k in ipairs({ "SPEC_SET", "SPEC_AUTO", "SPEC_BAD", "SPEC_MANUAL",
-                     "SPEC_MENU_AUTO", "SPEC_MENU_TITLE", "SPEC_TIP", "HELP_SPEC_SET" }) do
+                     "SPEC_MENU_AUTO", "SPEC_MENU_TITLE", "SPEC_TIP", "HELP_SPEC_SET",
+                     "CUSTOM_WEIGHTS", "CUSTOM_WEIGHTS_NOTE" }) do
   check(BLL.L[k] and BLL.L[k] ~= k, "Text fehlt: " .. k)
 end
 
