@@ -2,6 +2,17 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.7
+
+Aus dem Vergleich mit turtlelootline.com: dort wählt man die Spezialisierung selbst, im Addon stand für einen Stufe-15-Jäger „keine Spez. erkannt".
+
+- **Die Spezialisierung lässt sich jetzt von Hand wählen.** Ein Klick auf die Unterzeile im Fenster (Name, Stufe, Klasse) öffnet ein Menü mit „Automatisch" und den drei Talentbäumen. Automatisch bleibt die Voreinstellung und liest wie bisher die Talente ab 10 Punkten. Die eigene Wahl schlägt die Erkennung, steht als „(manuell)" in der Unterzeile und liegt pro Charakter in den SavedVariables. Nach der Wahl läuft die Suche sofort neu, weil sich mit den Gewichten die Rangfolge ändert.
+- **Neu: `/bll spec <1-3|Name|auto>`.** Dasselbe im Chat. Der Name darf abgekürzt und deutsch oder englisch sein, `/bll spec tier` und `/bll spec beast` wählen beide Tierherrschaft. `/bll spec` allein zeigt wie bisher die Talentverteilung und zusätzlich eine eigene Wahl.
+- **Spezialisierungen heissen in der englischen Anzeige jetzt englisch** („Beast Mastery" statt „Tierherrschaft").
+- Neuer Test `tools/test_specchoice.lua`. 30 Testdateien, alle grün.
+
+Beim Jäger ändert die Wahl an den Gewichten noch nichts: die drei Talentbäume nutzen bisher dieselben Klassenwerte, weil die Quelle sie nicht unterscheidet.
+
 ## 0.22.6
 
 Aus der Rückmeldung eines Testers, die mit einem Vergleichsbild der Seite turtlelootline.com kam.

@@ -137,6 +137,13 @@ local L_enUS = {
   ["AHEAD_INFO"]      = "Planning ahead: %d levels - that is what /bll up searches. Change with /bll ahead <0-60>, 0 shows only what you can wear right now.",
   ["SPEC_NONE"]       = "No spec detected (%d talent points spent, %d needed). Class weights apply.",
   ["SPEC_FOUND"]      = "Spec: %s (%d points total)",
+  ["SPEC_SET"]        = "Spec set manually: %s. |cff888888/bll spec auto|r returns to detection.",
+  ["SPEC_AUTO"]       = "Spec is detected automatically again.",
+  ["SPEC_BAD"]        = "Unknown spec: %s. Use 1, 2, 3, a spec name or auto.",
+  ["SPEC_MANUAL"]     = "manual",
+  ["SPEC_MENU_AUTO"]  = "Automatic",
+  ["SPEC_MENU_TITLE"] = "Spec",
+  ["SPEC_TIP"]        = "Click to choose your spec. Automatic reads it from your talents (from 10 points on).",
   ["INFO_LINE"]       = "pfQuest: %s | ItemDB: %s | Language: %s",
 
   -- ---- Hilfe ----
@@ -148,6 +155,7 @@ local L_enUS = {
   ["HELP_RATE"]       = "query rate in items/second (default 8)",
   ["HELP_FORGET"]     = "clear the item cache",
   ["HELP_SPEC"]       = "show detected spec",
+  ["HELP_SPEC_SET"]   = "choose spec manually, auto = detect",
   ["HELP_AHEAD"]      = "how many levels to plan ahead",
   ["HELP_CAT"]        = "reassign a location",
   ["HELP_UNUSED"]     = "show/hide unreachable sources",
@@ -352,6 +360,13 @@ local L_deDE = {
   ["AHEAD_INFO"]      = "Vorausplanung: %d Stufen - so weit sucht /bll up. Aendern mit /bll ahead <0-60>, 0 zeigt nur sofort Tragbares.",
   ["SPEC_NONE"]       = "Keine Spezialisierung erkannt (%d Talentpunkte vergeben, noetig sind %d). Es gelten die Klassenwerte.",
   ["SPEC_FOUND"]      = "Spezialisierung: %s (%d Punkte gesamt)",
+  ["SPEC_SET"]        = "Spezialisierung von Hand gesetzt: %s. |cff888888/bll spec auto|r schaltet zurueck auf Erkennung.",
+  ["SPEC_AUTO"]       = "Spezialisierung wird wieder automatisch erkannt.",
+  ["SPEC_BAD"]        = "Unbekannte Spezialisierung: %s. Moeglich sind 1, 2, 3, ein Name oder auto.",
+  ["SPEC_MANUAL"]     = "manuell",
+  ["SPEC_MENU_AUTO"]  = "Automatisch",
+  ["SPEC_MENU_TITLE"] = "Spezialisierung",
+  ["SPEC_TIP"]        = "Klicken, um die Spezialisierung zu waehlen. Automatisch liest sie aus den Talenten (ab 10 Punkten).",
   ["INFO_LINE"]       = "pfQuest: %s | ItemDB: %s | Sprache: %s",
 
   -- ---- Hilfe ----
@@ -363,6 +378,7 @@ local L_deDE = {
   ["HELP_RATE"]       = "Abfragerate in Items/Sekunde (Standard 8)",
   ["HELP_FORGET"]     = "Itemcache leeren",
   ["HELP_SPEC"]       = "erkannte Spezialisierung zeigen",
+  ["HELP_SPEC_SET"]   = "Spezialisierung von Hand waehlen, auto = erkennen",
   ["HELP_AHEAD"]      = "wie viele Stufen vorausgeplant wird",
   ["HELP_CAT"]        = "Fundort umsortieren",
   ["HELP_UNUSED"]     = "unerreichbare Quellen ein/ausblenden",

@@ -17,7 +17,7 @@ local L = BLL.L
 -- wird die Version in der TOC; BLL:Version() liest sie von dort.
 -- Bis 0.22.5 stand hier eine zweite, von Hand gepflegte Nummer, und
 -- sie lief auseinander: die TOC sagte 0.22.5, der Selbsttest 0.21.1.
-BLL.VERSION_FALLBACK = "0.22.6"
+BLL.VERSION_FALLBACK = "0.22.7"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -661,9 +661,31 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       BLL:Print(string.format(L["AHEAD_INFO"], BLL.Candidates:PlanAhead()))
     end
 
+  elseif command == "spec" and param ~= "" then
+    -- /bll spec <Nr|Name> waehlt von Hand, /bll spec auto gibt an die
+    -- Erkennung zurueck.
+    if string.lower(param) == "auto" then
+      BLL.Weights:SetSpec(nil)
+      BLL:Print(L["SPEC_AUTO"])
+    else
+      local tab = BLL.Weights:FindSpec(param)
+      if not tab then
+        BLL:Print(string.format(L["SPEC_BAD"], param))
+      else
+        BLL.Weights:SetSpec(tab)
+        BLL.Weights:Get()
+        BLL:Print(string.format(L["SPEC_SET"], BLL.Weights.activeSpec or "?"))
+      end
+    end
+    -- Die Gewichte aendern die Rangfolge.
+    BLL.Candidates:Run()
+
   elseif command == "spec" then
     local tab, name, total = BLL.Weights:DetectSpec()
     BLL.Weights:Get()
+    if BLL.Weights.specManual then
+      BLL:Print(string.format(L["SPEC_SET"], BLL.Weights.activeSpec or "?"))
+    end
     if not tab then
       BLL:Print(string.format(L["SPEC_NONE"], total or 0, BLL.Weights.MIN_POINTS))
     else
@@ -776,6 +798,7 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       { "/bll rate <n>",        "HELP_RATE"       },
       { "/bll forget",          "HELP_FORGET"     },
       { "/bll spec",            "HELP_SPEC"       },
+      { "/bll spec <1-3|auto>", "HELP_SPEC_SET"   },
       { "/bll ahead <n>",       "HELP_AHEAD"      },
       { "/bll cat <zone> <cat>","HELP_CAT"        },
       { "/bll unused",          "HELP_UNUSED"     },

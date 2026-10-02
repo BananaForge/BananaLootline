@@ -308,6 +308,61 @@ function UI:Init()
   SetFontSize(subtitle, 13)
   f.subtitle = subtitle
 
+  -- Die Unterzeile ist zugleich die Spec-Auswahl. Erkannt wird weiter
+  -- automatisch; der Klick erlaubt, das zu ueberstimmen.
+  local specBtn = CreateFrame("Button", nil, f)
+  specBtn:SetPoint("TOPLEFT", subtitle, "TOPLEFT", -4, 2)
+  specBtn:SetPoint("BOTTOMRIGHT", subtitle, "BOTTOMRIGHT", 4, -2)
+  specBtn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+
+  local specDD = CreateFrame("Frame", "BananaLootlineSpecDD", f, "UIDropDownMenuTemplate")
+  specDD:Hide()
+  specDD.initialize = function()
+    local L = BLL.L
+    local W = BLL.Weights
+    local class = BLL.player and BLL.player.class
+    local specs = W.SPECS[class or ""] or {}
+    local chosen = W:ChosenSpec()
+
+    local head = {}
+    head.text = L["SPEC_MENU_TITLE"]
+    head.isTitle = 1
+    head.notCheckable = 1
+    UIDropDownMenu_AddButton(head)
+
+    local detected = W:DetectSpec()
+    local auto = {}
+    auto.text = L["SPEC_MENU_AUTO"] .. (detected and specs[detected]
+      and (" (" .. W:SpecName(specs[detected].name) .. ")")
+      or (" (" .. L["NO_SPEC"] .. ")"))
+    auto.checked = (chosen == nil)
+    auto.func = function() UI:ChooseSpec(nil) end
+    UIDropDownMenu_AddButton(auto)
+
+    for i = 1, 3 do
+      if specs[i] then
+        local info = {}
+        info.text = W:SpecName(specs[i].name)
+        info.value = i
+        info.checked = (chosen == i)
+        info.func = function() UI:ChooseSpec(this.value) end
+        UIDropDownMenu_AddButton(info)
+      end
+    end
+  end
+
+  specBtn:SetScript("OnClick", function()
+    pcall(ToggleDropDownMenu, 1, nil, specDD, specBtn, 0, 0)
+  end)
+  specBtn:SetScript("OnEnter", function()
+    GameTooltip:SetOwner(this, "ANCHOR_BOTTOM")
+    GameTooltip:SetText(BLL.L["SPEC_MENU_TITLE"])
+    GameTooltip:AddLine(BLL.L["SPEC_TIP"], 0.8, 0.8, 0.8, 1)
+    GameTooltip:Show()
+  end)
+  specBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  self.specBtn = specBtn
+
   -- Schliessen
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, -4)
@@ -525,6 +580,27 @@ local VIEW_LABEL = {
 -- steht. Beim Aufbau des Fensters kann Candidates aber noch fehlen -
 -- die Ladereihenfolge der TOC stellt das nicht sicher -, deshalb die
 -- Pruefung statt eines blinden Aufrufs.
+------------------------------------------------------------------
+-- Spezialisierung waehlen (nil = automatisch). Die Gewichte aendern
+-- die Rangfolge, also wird die Suche gleich neu ausgefuehrt.
+------------------------------------------------------------------
+
+function UI:ChooseSpec(tab)
+  if CloseDropDownMenus then CloseDropDownMenus() end
+  BLL.Weights:SetSpec(tab)
+  BLL.Weights:Get()
+  if tab then
+    BLL:Print(string.format(BLL.L["SPEC_SET"], BLL.Weights.activeSpec or "?"))
+  else
+    BLL:Print(BLL.L["SPEC_AUTO"])
+  end
+  if BLL.Candidates and BLL.Candidates.Run then
+    BLL.Candidates:Run()
+  else
+    self:Refresh()
+  end
+end
+
 function UI:UpdateAhead()
   if not self.aheadValue then return end
   if not (BLL.Candidates and BLL.Candidates.PlanAhead) then return end
@@ -2414,7 +2490,8 @@ function UI:Refresh()
   self.frame.subtitle:SetText(
     (p.name or "?") .. "  -  " .. (BLL.locale == "deDE" and "Stufe " or "Level ")
     .. (p.level or 0) .. " " .. (p.class or "?")
-    .. (spec and ("  |cffffcc00" .. spec .. "|r") or
+    .. (spec and ("  |cffffcc00" .. spec .. "|r"
+          .. (BLL.Weights.specManual and ("|cff888888 (" .. BLL.L["SPEC_MANUAL"] .. ")|r") or "")) or
         ("  |cff888888(" .. BLL.L["NO_SPEC"] .. ")|r"))
     .. (BLL.Sources.available and "" or ("   |cffff8800(" .. BLL.L["NO_PFQUEST_SHORT"] .. ")|r"))
   )
