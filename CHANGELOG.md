@@ -2,6 +2,50 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.6
+
+Aus der Rückmeldung eines Testers, die mit einem Vergleichsbild der Seite turtlelootline.com kam.
+
+- **Inhalt, den es auf dem Server noch nicht gibt, fällt aus dem Wegplan.** Ein Stufe-57-Paladin bekam als besten Wegplan Naxxramas, Ahn'Qiraj, den Smaragdgrünen Hain, die Obere Nekropole, den Turm von Karazhan und den Felsen der Verwüstung vorgeschlagen — alle sechs sind auf OctoWoW noch nicht offen. 524 von 2385 Dropzeilen in seinem Kandidatenpool kamen aus Instanzen, die nicht existieren. Das Addon konnte das nicht sehen, weil es Erreichbarkeit nur an der Gegnerstufe gemessen hat, und ein Stufe-63-Boss in Naxxramas sieht genauso aus wie ein Stufe-63-Gegner in Silithus.
+- **Neu: `Phases.lua`.** Die sieben Inhaltsphasen mit ihren Freigabeterminen von `octowow.st/roadmap`, jeder Phase ihre Zonen zugeordnet. Eine Zone, deren Phase noch nicht offen ist, liefert keine Quellen. Das Datum entscheidet, die Sperre trägt sich also am Freigabetag selbst aus. Zonen ausserhalb der Liste — 86 der 96 Orte mit Beute — sind unberührt offen.
+- **Neu: `/bll phase`.** Zeigt die sieben Phasen mit Termin und Zustand. `/bll phase <Nr> on|off` stellt eine Phase von Hand um, falls der Server von der Roadmap abweicht; `auto` nimmt das zurück. Die eigene Angabe liegt in den SavedVariables und schlägt den Termin.
+- **Zwei Zonen sind über ihre Beute zugeordnet, nicht über den Namen.** „The Upper Necropolis" führt *Glyph of Deflection* und *Slayer's Crest* auf Itemlevel 90 — die Naxxramas-Schmuckstücke des Originals, also Phase 6. „The Rock of Desolation" führt Itemlevel 96, höher als alles in Naxxramas, mit Namen wie *Mephistroth's Cunning* — also Phase 7. Beide Zuordnungen sind begründet, nicht belegt; wer es besser weiss, stellt die Phase um.
+- **Timbermaw Hold bleibt absichtlich offen.** Phase 5 heisst so, aber die beiden Zonen dieses Namens im Datenbestand führen nur neun Questbelohnungen auf Queststufe 45 und 50 — den Tunnel, der seit Serverstart offen ist. Wer sie sperrt, nimmt einem Stufe-45-Charakter Beute weg, die er holen kann. Die Instanz der Phase 5 steht noch nicht im Datenbestand.
+- **Die Version kommt jetzt aus einer Quelle.** Bis 0.22.5 sagte die TOC 0.22.5 und der Selbsttest 0.21.1, weil die Nummer an zwei Stellen stand. `BLL.VERSION` ist weg; die Anmeldezeile und der Selbsttest lesen beide die TOC.
+- **Zauberteile führten keinen Heilwert.** In Vanilla steht auf den meisten eine einzige Zeile: „Increases damage **and healing** done by magical spells and effects by up to N." Der Importer trug daraus nur `SPELLPOWER` ein, und damit fehlte 1443 Teilen ihr Heilwert vollständig. Für einen Heiler stand die Rangfolge dadurch auf dem Kopf: ein Teil mit „22 Schaden und Heilung" bekam 22 Punkte, ein Teil mit „22 Heilung" 35 — obwohl das erste dieselbe Heilung gibt und den Zauberschaden obendrein. Jetzt zählt die Zeile für beide Werte. Teile mit Heilwert: 543 vorher, 1985 jetzt.
+- **Bei 49 Teilen addieren sich zwei Zeilen.** Das sind die Heilersets der ersten Raidstufe. *Circlet of Prophecy* führt „12 Schaden und Heilung" plus „11 Heilung", also 23 Heilung — im Addon standen 11. *Robes of Transcendence* gewinnen dadurch 48 Punkte für einen Heiligen Paladin.
+- **Fehlende Anforderungsstufen werden geschätzt und als Schätzung markiert.** 3362 anlegbare Teile führen im Export keine. Der Abstand zwischen Itemstufe und Anforderungsstufe liegt im Bestand im Median bei genau 5; nach oben begrenzt 60, weil es in Vanilla keine höhere Anforderung gibt. Das neue Feld `reqest=1` hält fest, dass die Zahl geschätzt ist — eine Schätzung, die wie eine Messung aussieht, kann niemand mehr nachprüfen. Damit hat jedes anlegbare Teil eine Anforderungsstufe, und ein harter Filter darauf wirft nichts mehr weg.
+- **Neu: `STAT_OVERRIDES` im Importer.** Zwei Teile tragen im Spiel einen Ausdauer-Nachteil, der im Export fehlt — *Cursed Eye of Paleth* mit −3 und *Bleeding Heart Talisman* mit −5. Die Werte stehen im Importer statt in `ItemData.lua`, weil die Datendatei bei jedem Import neu geschrieben wird. Herkunft ist ein Abgleich mit turtlelootline.com, nicht der Export; wer sie im Spiel am Tooltip sieht, kann sie bestätigen.
+- Neuer Test `tools/test_spellpower.lua`.
+- Neuer Test `tools/test_phases.lua`, der die sechs gemeldeten Orte als gesperrt und Blackrock Depths, Hateforge Quarry, Dire Maul und Scholomance als erreichbar nachweist. 29 Testdateien, alle grün.
+
+### Noch offen
+
+**Molten Core steht für eine Stufe 57 weiter im Wegplan**, mit 237 Epics auf Itemlevel bis 80. Das ist keine Phasensperre — Molten Core ist offen —, sondern die Vorausplanung: bei der Voreinstellung von sechs Stufen reicht die Suche bis Stufe 63 und lässt damit alles mit Anforderungsstufe 60 herein. `/bll ahead 0` nimmt es heraus. Ob die Voreinstellung sinken soll oder ob geplante Teile getrennt von sofort tragbaren stehen sollten, ist noch nicht entschieden.
+
+**Der Absturz bei Qualität 6 ist nicht behoben.** `UI.lua` kennt die Qualitäten 0 bis 5; der Datenbestand führt acht Teile mit Qualität 6, darunter vier Schmuckstücke auf Anforderungsstufe 51. Die trifft jeder Charakter ab Stufe 51, und keine Phasensperre hält sie auf.
+
+**Es gibt kein Minimap-Symbol.** Nicht ein defektes, sondern keines.
+
+**Ein Teil verliert weiter seinen Zauberschaden.** *The Scythe of Elune* führt „Improves your chance to hit and get a critical strike with spells by 2%. Increases damage done by magical spells and effects by up to 40." — zwei Sätze in einer Zeile. Die Muster des Importers greifen am Zeilenanfang, also fällt der zweite Satz weg. Das einzige Teil im Bestand mit diesem Aufbau.
+
+## 0.22.5
+
+Aus zwei Testerrückmeldungen im Discord.
+
+- **`/bll info` nennt jetzt die Version.** Ein Tester schrieb „I updated addons early 30/9, idk if u pushed another update in the meantime" — an dem Tag gab es fünf Fassungen. Ohne Versionsangabe lässt sich keine Fehlermeldung einordnen. Die Zeile kommt aus der TOC über `GetAddOnMetadata`, damit sie nicht an zwei Stellen gepflegt werden muss. Dazu die Zahl der geladenen Fundorte, NPC-Namen und Zonen.
+- **Die Vorausplanung steht jetzt im Fenster.** Zwei Tester haben unabhängig voneinander danach gesucht; einer schrieb „I could not adjust the search range still". Es gab sie nur als `/bll ahead <n>` im Chat — ein Befehl, den niemand findet, ist keine Einstellung. Jetzt stehen Minus und Plus mit dem Wert rechts neben „Upgrades suchen", mit dem Zweck im Tooltip.
+- **Eine Gruppe im Wegplan hiess buchstäblich „???".** Dahinter stecken vier Bosse auf Stufe 63 mit Beute auf Itemlevel 92 bis 96 — die Daten stimmten, nur der Name war pfQuests Platzhalter für unbenannte Zonen. Ursache war die Reihenfolge der Datenpakete: eines führt für Zone 5557 „???", ein anderes den echten Namen **The Rock of Desolation**, und das später gelesene gewann. Der Importer überspringt Platzhalter jetzt, damit sich der echte Name durchsetzt.
+- Bleibt eine Zone trotzdem namenlos, zeigt das Addon „Zone 5557" statt sie wegzulassen. An der Nummer sieht man, was zu benennen ist — und die Gegenstände fallen nicht aus dem Wegplan.
+- **Neu: `/bll zone <id> <Name>`.** Benennt einen Ort, den weder pfQuest noch der Import kennt. Die Angabe liegt in den SavedVariables und überlebt jedes Datenupdate. `/bll zone <id>` ohne Namen setzt zurück, `/bll zone` allein listet die eigenen Benennungen.
+- Neuer Test `tools/test_zonename.lua`. 27 Testdateien, alle grün.
+
+### Nicht behoben
+
+**Frostmane Hollow fehlt im Wegplan.** Ein Tester hat danach gefragt. Die Gegenstände sind da und die Dropchancen stimmen — 20 Gegner mit „Frostmane" im Namen, 93 Dropzeilen —, aber bei 83 davon kennt pfQuest den Standort des Gegners nicht. Ohne Ort keine Gruppe. Unter „Pro Item" erscheinen sie. Das ist derselbe Fall wie die übrigen 521 Zeilen ohne Ort und löst sich erst, wenn der Export den Zonennamen selbst mitliefert.
+
+Ragefire Chasm dagegen **ist** enthalten, mit 32 Gegenständen.
+
 ## 0.22.4
 
 - **Symbole aus dem Export.** `GetItemInfo` liefert die Textur nur für Gegenstände, die der Client schon einmal gesehen hat — ausgerechnet die Teile, die man noch nicht hat, standen deshalb als Fragezeichen im Fenster. Der Export führt den Namen der Textur bei 99,4 % der Einträge; 14081 der 14230 anlegbaren Gegenstände haben jetzt ein Symbol. Der Pfad `Interface\Icons\` wird im Addon angehängt, statt ihn 14000 Mal mitzuschreiben. `GetItemInfo` bleibt die erste Wahl, der Import springt nur ein, wenn der Client nichts weiss. `Data/ItemData.lua` wächst dadurch um 320 KB auf 2,6 MB.

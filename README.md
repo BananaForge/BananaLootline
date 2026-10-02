@@ -103,6 +103,9 @@ Dungeon, Raid, World Boss, Battleground, Vendor, Quest, World. The location deci
 ### 🔭 Forward Planning
 `/bll ahead <n>` sets how many levels ahead the search reaches. Sources far above your level are dropped — the margin is generous enough to keep instances in, since a level-15 character does run the Deadmines with a group.
 
+### 🔒 Content Phases
+Instances that are not open on OctoWoW yet are left out. A level 57 was being sent to Naxxramas and Ahn'Qiraj — content that does not exist on the server, which the addon could not see because it judged reachability by mob level alone. The seven release dates come from [octowow.st/roadmap](https://octowow.st/roadmap) and the lock lifts itself on release day. `/bll phase` lists them; `/bll phase <no> on|off` overrides one by hand if the server differs.
+
 ### ✨ Enchant Recommendations
 107 enchants from the OctoWoW database, scored with the same weights as gear. Scope suggestions cover Back, Chest, Wrist, Hands, Legs, Feet, Main Hand and Ranged.
 
@@ -147,7 +150,9 @@ Settings from an earlier OctoLootline install are carried over automatically.
 | `/bll src <itemID>` | Sources of an item: mob, level, elite rank, chance, zone, vendor price |
 | `/bll set <itemID>` | Set membership and bonuses |
 | `/bll item <itemID>` | The cached entry of an item, including any detected restriction |
-| `/bll info` | Status line — data loaded, pfQuest present, locale |
+| `/bll info` | Status line — version, data loaded, pfQuest present, locale, phases |
+| `/bll phase` | List the seven content phases with dates and state |
+| `/bll phase <no> on\|off\|auto` | Open or close a phase by hand, `auto` follows the date again |
 
 ### When something looks wrong
 
@@ -263,6 +268,7 @@ The best bug reports include a **screenshot** showing what you saw and what you 
 /bll src <id>    — where the addon thinks an item comes from
 /bll dump <id>   — raw tooltip lines for an item
 /bll info        — addon version and data state
+/bll phase       — which content phases are open
 ```
 
 Every piece of feedback improves the addon for everyone. You genuinely matter.

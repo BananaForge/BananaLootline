@@ -129,10 +129,26 @@ function Sources:QuestName(id)
 end
 
 function Sources:ZoneName(id)
+  if not id then return nil end
+
+  -- Eigene Benennung hat Vorrang. Fuer Orte, die weder pfQuest noch der
+  -- Import kennt, laesst sich der Name mit "/bll zone <id> <Name>"
+  -- nachtragen - das ueberlebt jedes Datenupdate.
+  local own = BananaLootlineDB and BananaLootlineDB.zoneNames
+  if own and own[id] then return own[id] end
+
   local name = self.zoneloc and self.zoneloc[id]
-  if name == "_" then name = nil end
+  if name == "_" or name == "???" then name = nil end
   if not name and self.zoneNames then name = self.zoneNames[id] end
-  if name == "_" then return nil end
+  if name == "_" or name == "???" then name = nil end
+
+  -- Ohne Namen trotzdem eine Gruppe bilden. Die Alternative waere, die
+  -- Gegenstaende aus dem Wegplan fallen zu lassen - bei Zone 5557 sind
+  -- das 37 Stueck mit Itemlevel 92 bis 96. Die Nummer im Namen sagt,
+  -- was man benennen muss.
+  if not name then
+    return (BLL.locale == "deDE") and ("Zone " .. id) or ("Zone " .. id)
+  end
   return name
 end
 
@@ -260,6 +276,18 @@ function Sources:IsReachable(entry)
     if string.find(name, UNUSED_MARKERS[i]) then return false end
   end
 
+  -- Inhalt, der auf dem Server noch nicht offen ist.
+  --
+  -- Das war die Ursache des gemeldeten Unsinns: ein Stufe-57-Paladin
+  -- bekam Naxxramas, Ahn'Qiraj und den Turm von Karazhan als besten
+  -- Wegplan - Instanzen, die es auf OctoWoW noch nicht gibt. Die Pruefung
+  -- an der Gegnerstufe konnte das nicht sehen, weil ein Stufe-63-Boss in
+  -- Naxxramas genauso aussieht wie ein Stufe-63-Gegner in Silithus.
+  -- Welche Zone zu welcher Phase gehoert, steht in Phases.lua.
+  if entry.zoneID and BLL.Phases and not BLL.Phases:IsOpen(entry.zoneID) then
+    return false
+  end
+
   if entry.stype == "U" or entry.stype == "O" or entry.stype == "C" then
     if not entry.chance or entry.chance <= 0 then return false end
   end
@@ -366,6 +394,7 @@ function Sources:ImportedSources(itemID)
         id        = r.n,
         name      = self:UnitName(r.n),
         zone      = r.z and self:ZoneName(r.z) or nil,
+        zoneID    = r.z,
         level     = r.l,
         chance    = r.p,
         elite     = r.e,
@@ -383,6 +412,7 @@ function Sources:ImportedSources(itemID)
       id        = r.n,
       name      = self:UnitName(r.n),
       zone      = r.z and self:ZoneName(r.z) or nil,
+      zoneID    = r.z,
       cost      = r.c,
       tag       = r.t,
       faction   = r.f,
@@ -404,6 +434,7 @@ function Sources:ImportedSources(itemID)
       -- Der Ort einer Questbelohnung ist der Questgeber. Ohne ihn
       -- stuende sie ohne Ort in der Liste und der Wegplan sagte nichts.
       zone       = r.z and self:ZoneName(r.z) or nil,
+      zoneID     = r.z,
       giver      = r.g and self:UnitName(r.g) or nil,
       sure       = true,
       imported   = true,
@@ -420,6 +451,7 @@ function Sources:ImportedSources(itemID)
         name      = r.t,
         chance    = r.p,
         zone      = r.z and self:ZoneName(r.z) or nil,
+        zoneID    = r.z,
         imported  = true,
       })
     end

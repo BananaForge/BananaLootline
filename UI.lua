@@ -416,10 +416,83 @@ function UI:Init()
   end)
   self.upgradeBtn = upgradeBtn
 
+  ----------------------------------------------------------------
+  -- Vorausplanung
+  --
+  -- Wie viele Stufen die Suche nach oben reicht. Das gab es bisher nur
+  -- als "/bll ahead <n>" im Chat, und zwei Tester haben unabhaengig
+  -- voneinander danach gesucht - einer schrieb "I could not adjust the
+  -- search range still". Ein Befehl, den niemand findet, ist keine
+  -- Einstellung.
+  --
+  -- Minus und Plus statt eines Eingabefelds: der Wert hat drei
+  -- sinnvolle Stellen, und ein Klick ist schneller als tippen.
+  ----------------------------------------------------------------
+
+  local MIN_AHEAD, MAX_AHEAD = 0, 20
+
+  local aheadBox = CreateFrame("Frame", nil, f)
+  aheadBox:SetWidth(118); aheadBox:SetHeight(20)
+  aheadBox:SetPoint("LEFT", upgradeBtn, "RIGHT", 10, 0)
+
+  local aheadLabel = aheadBox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  aheadLabel:SetPoint("LEFT", aheadBox, "LEFT", 0, 0)
+  aheadLabel:SetTextColor(0.6, 0.6, 0.6)
+  self.aheadLabel = aheadLabel
+
+  local aheadValue = aheadBox:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  aheadValue:SetPoint("RIGHT", aheadBox, "RIGHT", -20, 0)
+  aheadValue:SetWidth(22)
+  aheadValue:SetJustifyH("CENTER")
+  self.aheadValue = aheadValue
+
+  local function SetAhead(n)
+    if n < MIN_AHEAD then n = MIN_AHEAD end
+    if n > MAX_AHEAD then n = MAX_AHEAD end
+    BananaLootlineDB.planAhead = n
+    UI:UpdateAhead()
+  end
+
+  local function CurrentAhead()
+    if BLL.Candidates and BLL.Candidates.PlanAhead then
+      return BLL.Candidates:PlanAhead()
+    end
+    return BananaLootlineDB.planAhead or 6
+  end
+
+  local aheadMinus = CreateFrame("Button", nil, aheadBox, "UIPanelButtonTemplate")
+  aheadMinus:SetWidth(18); aheadMinus:SetHeight(18)
+  aheadMinus:SetPoint("RIGHT", aheadValue, "LEFT", -2, 0)
+  aheadMinus:SetText("-")
+  aheadMinus:SetScript("OnClick", function()
+    SetAhead(CurrentAhead() - 1)
+  end)
+
+  local aheadPlus = CreateFrame("Button", nil, aheadBox, "UIPanelButtonTemplate")
+  aheadPlus:SetWidth(18); aheadPlus:SetHeight(18)
+  aheadPlus:SetPoint("LEFT", aheadValue, "RIGHT", 2, 0)
+  aheadPlus:SetText("+")
+  aheadPlus:SetScript("OnClick", function()
+    SetAhead(CurrentAhead() + 1)
+  end)
+
+  -- Der Zweck steht im Tooltip, nicht als dritte Zeile im Fenster.
+  local function AheadTip()
+    GameTooltip:SetOwner(this, "ANCHOR_TOP")
+    GameTooltip:SetText(BLL.L["AHEAD_TITLE"])
+    GameTooltip:AddLine(BLL.L["AHEAD_TIP"], 0.8, 0.8, 0.8, 1)
+    GameTooltip:Show()
+  end
+  local function AheadTipOut() GameTooltip:Hide() end
+  for _, b in ipairs({ aheadMinus, aheadPlus }) do
+    b:SetScript("OnEnter", AheadTip)
+    b:SetScript("OnLeave", AheadTipOut)
+  end
+
   -- Exportstring
   local exportBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   exportBtn:SetWidth(90); exportBtn:SetHeight(20)
-  exportBtn:SetPoint("LEFT", upgradeBtn, "RIGHT", 6, 0)
+  exportBtn:SetPoint("LEFT", aheadBox, "RIGHT", 6, 0)
   exportBtn:SetText("Export")
   exportBtn:SetScript("OnClick", function()
     UI:ShowExport()
@@ -446,6 +519,27 @@ local VIEW_LABEL = {
   enUS = { lootline = "Lootline", slot = "Per item", enchant = "Enchant" },
 }
 
+-- Zahl und Beschriftung der Vorausplanung auffrischen.
+--
+-- Der Wert kommt aus Candidates, damit die Vorgabe an einer Stelle
+-- steht. Beim Aufbau des Fensters kann Candidates aber noch fehlen -
+-- die Ladereihenfolge der TOC stellt das nicht sicher -, deshalb die
+-- Pruefung statt eines blinden Aufrufs.
+function UI:UpdateAhead()
+  if not self.aheadValue then return end
+  if not (BLL.Candidates and BLL.Candidates.PlanAhead) then return end
+  local n = BLL.Candidates:PlanAhead()
+  self.aheadValue:SetText(tostring(n))
+  if n == 0 then
+    self.aheadValue:SetTextColor(0.6, 0.6, 0.6)
+  else
+    self.aheadValue:SetTextColor(1, 0.82, 0)
+  end
+  if self.aheadLabel then
+    self.aheadLabel:SetText((BLL.locale == "deDE") and "Voraus" or "Ahead")
+  end
+end
+
 function UI:ApplyLocale()
   local f = self.frame
   if not f then return end
@@ -457,6 +551,7 @@ function UI:ApplyLocale()
     b:SetText(labels[b.viewKey])
   end
   if self.rescanBtn then self.rescanBtn:SetText(de and "Neu scannen" or "Rescan") end
+  self:UpdateAhead()
   if self.upgradeBtn then self.upgradeBtn:SetText(de and "Upgrades suchen" or "Find upgrades") end
 
   local pane = self.detail

@@ -1,6 +1,6 @@
 -- Automatisch erzeugt von tools/octo_import.py
 -- Quelle: OctoWoW-Export (octowow.st/db)
--- Erzeugt: 2026-09-30 08:48:27
+-- Erzeugt: 2026-10-01 16:57:41
 -- Eintraege: 137
 -- Zonennamen zu den IDs aus SourceData.lua.
 -- Herkunft: pfQuest. Der Nummernkreis des OctoWoW-
@@ -139,7 +139,7 @@ BananaLootlineZoneNames = {
 [5208]="Gilneas City",
 [5225]="Thalassian Highlands",
 [5536]="Blackstone Island",
-[5557]="???",
+[5557]="The Rock of Desolation",
 [5561]="Balor",
 [5581]="Northwind ",
 [5601]="Dragonmaw Retreat",

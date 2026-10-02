@@ -146,11 +146,23 @@ RAW_PATTERNS = [
     ("SPELLPOWER_SHADOW",
      r"^Increases damage done by Shadow spells and effects by up to (\d+)"),
 
-    ("SPELLPOWER",
+    # "Increases damage AND HEALING done by ..." gibt beides. Bis 0.22.6
+    # trug der Importer nur SPELLPOWER ein, und damit fehlte 1443 Teilen
+    # ihr Heilwert komplett - darunter jedem Teil mit dieser Zeile, das
+    # ein Heiler anlegt. Bei 49 Teilen kommt eine zweite Zeile mit
+    # zusaetzlicher Heilung dazu; die addieren sich, weil stats[key]
+    # aufaddiert. Circlet of Prophecy heisst also 12 Zauberschaden und
+    # 12 + 11 = 23 Heilung, nicht 11.
+    (("SPELLPOWER", "HEALPOWER"),
      r"^Increases damage and healing done by magical spells and effects"
      r" by up to (\d+)"),
     ("HEALPOWER",
      r"^Increases healing done by spells and effects by up to (\d+)"),
+    # Reiner Zauberschaden ohne Heilung. Nur ein Teil im Bestand fuehrt
+    # das - The Scythe of Elune mit 40 -, und ohne dieses Muster fiel der
+    # Wert ganz weg. Muss nach den Schulenvarianten stehen.
+    ("SPELLPOWER",
+     r"^Increases damage done by magical spells and effects by up to (\d+)"),
 
     ("SPELLCRIT",
      r"^Improves your chance to get a critical strike with spells by"
@@ -179,6 +191,28 @@ PATTERNS = [(k, re.compile(p)) for k, p in RAW_PATTERNS]
 
 # "+N All Resistances" schlaegt auf alle fuenf Schulen durch.
 ALL_RES = re.compile(r"^\+(\d+) All Resistances")
+
+# ---------------------------------------------------------------------
+# Werte, die der Export nicht fuehrt
+#
+# Zwei Teile tragen im Spiel einen Nachteil, der im Export fehlt - weder
+# in attributes noch in den equip-Zeilen steht er. Ohne ihn sieht ein
+# verfluchtes Teil besser aus, als es ist.
+#
+# HERKUNFT: aus einem Abgleich mit turtlelootline.com, nicht aus dem
+# Export und nicht von der OctoWoW-Datenbank nachgeprueft. Die Seite
+# rendert ihre Itemseiten per Javascript, ein Abruf liefert nichts. Wer
+# die Zahlen im Spiel am Tooltip sieht, kann sie hier bestaetigen oder
+# korrigieren.
+#
+# Hier statt von Hand in ItemData.lua, weil diese Datei bei jedem Import
+# neu geschrieben wird und eine Handkorrektur darin verloren geht.
+# ---------------------------------------------------------------------
+
+STAT_OVERRIDES = {
+    2944:  {"STA": -3},   # Cursed Eye of Paleth
+    81016: {"STA": -5},   # Bleeding Heart Talisman
+}
 
 ATTR_KEY = {
     "Strength": "STR", "Agility": "AGI", "Stamina": "STA",
@@ -216,7 +250,9 @@ def parse_effects(lines, stats):
             val = float(m.group(1))
             if val == int(val):
                 val = int(val)
-            stats[key] = stats.get(key, 0) + val
+            # Eine Zeile kann auf mehrere Werte durchschlagen.
+            for k in (key if isinstance(key, tuple) else (key,)):
+                stats[k] = stats.get(k, 0) + val
             hit = True
             break
 
@@ -346,12 +382,43 @@ def build_item(item):
         "quality": item.get("quality"),
         "slot": slot,
         "reqlevel": item.get("reqlevel") or st.get("requiresLevel") or None,
+        # reqest wird unten gesetzt, wenn die Stufe geschaetzt ist.
+        "reqest": None,
         "itemclass": itemclass,
         "subclass": subclass,
         "classmask": classmask,
         "racemask": racemask,
         "stats": stats,
     }
+
+    # Fehlende Anforderungsstufe schaetzen.
+    #
+    # 3057 anlegbare Teile fuehren im Export keine. Ohne Stufe kann das
+    # Addon nicht entscheiden, ob ein Teil jetzt tragbar ist oder erst
+    # spaeter - und ein harter Filter auf die Anforderungsstufe, wie ihn
+    # die Vergleichsseite benutzt, wuerde sie alle wegwerfen.
+    #
+    # Der Abstand zwischen Itemstufe und Anforderungsstufe liegt im
+    # Bestand im Median bei genau 5. Nach oben begrenzt 60, weil es in
+    # Vanilla keine hoehere Anforderung gibt - ein Teil auf Itemstufe 92
+    # fordert 60, nicht 87.
+    #
+    # reqest=1 merkt sich, dass die Zahl geschaetzt ist. Eine Schaetzung,
+    # die wie eine Messung aussieht, ist schlimmer als eine fehlende
+    # Angabe: niemand kann sie spaeter noch nachpruefen.
+    if out["reqlevel"] is None and slot:
+        est = (out["ilvl"] or 1) - 5
+        if est < 1:
+            est = 1
+        if est > 60:
+            est = 60
+        out["reqlevel"] = est
+        out["reqest"] = 1
+
+    over = STAT_OVERRIDES.get(item.get("id") or item.get("entry"))
+    if over:
+        for k, v in over.items():
+            stats[k] = v
 
     # Proc und Benutzeffekt. 1 = Chance bei Treffer, 2 = Benutzen,
     # 3 = beides. Candidates.lua braucht das, damit ein Gegenstand mit
@@ -647,7 +714,19 @@ def load_zone_names(paths):
         text = open(path, encoding="utf-8", errors="replace").read()
         for m in ZONE_NAME.finditer(text):
             zid, name = int(m.group(1)), unescape(m.group(2))
-            if name and name != "_":
+            # "_" und "???" sind pfQuests Platzhalter fuer Zonen ohne
+            # Namen. Sie als Namen zu uebernehmen hiesse, im Wegplan
+            # eine Gruppe namens "???" zu zeigen - das sieht nach einem
+            # kaputten Addon aus, obwohl die Daten stimmen. Betrifft
+            # Zone 5557 mit 37 Gegenstaenden: vier Bosse auf Stufe 63,
+            # Beute mit Itemlevel 92 bis 96. Welche Instanz das ist,
+            # laesst sich aus den Daten nicht belegen - "Karazhan Crypt"
+            # und "Tower of Karazhan" sind bereits eigene Zonen.
+            #
+            # Ohne Namen faellt die Zone hier raus; das Addon zeigt
+            # stattdessen "Zone 5557" und laesst sie mit
+            # "/bll zone 5557 <Name>" benennen.
+            if name and name != "_" and name != "???":
                 names[zid] = name
     return names
 
@@ -752,7 +831,7 @@ def lua_value(v):
     return "nil"
 
 
-ITEM_ORDER = ["name", "ilvl", "quality", "slot", "reqlevel", "itemclass",
+ITEM_ORDER = ["name", "ilvl", "quality", "slot", "reqlevel", "reqest", "itemclass",
               "subclass", "classmask", "racemask", "proc", "xdmg",
               "unique", "unscored", "rep", "setname", "icon", "stats"]
 
