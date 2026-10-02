@@ -17,7 +17,7 @@ local L = BLL.L
 -- wird die Version in der TOC; BLL:Version() liest sie von dort.
 -- Bis 0.22.5 stand hier eine zweite, von Hand gepflegte Nummer, und
 -- sie lief auseinander: die TOC sagte 0.22.5, der Selbsttest 0.21.1.
-BLL.VERSION_FALLBACK = "0.22.11"
+BLL.VERSION_FALLBACK = "0.22.12"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -123,6 +123,7 @@ frame:SetScript("OnEvent", function()
     BLL.Sources:Init()
     BLL.Gear:ScanEquipped()
     BLL.UI:Init()
+    if BLL.Minimap then BLL.Minimap:Init() end
 
     -- Nachscans. Beim Betreten der Welt kennt der Client die Daten der
     -- angelegten Items oft noch nicht - der Tooltip ist dann leer und
@@ -600,6 +601,13 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       BLL:Print(string.format(L["RATE_INFO"], BananaLootlineDB.queryRate or 8))
     end
 
+  elseif command == "minimap" then
+    if BLL.Minimap:Toggle() then
+      BLL:Print(L["MINIMAP_SHOWN"])
+    else
+      BLL:Print(L["MINIMAP_HIDDEN"])
+    end
+
   elseif command == "why" then
     local id = tonumber(param)
     if not id then
@@ -812,6 +820,7 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       { "/bll spec",            "HELP_SPEC"       },
       { "/bll spec <1-3|auto>", "HELP_SPEC_SET"   },
       { "/bll why <itemID>",    "HELP_WHY"        },
+      { "/bll minimap",         "HELP_MINIMAP"    },
       { "/bll ahead <n>",       "HELP_AHEAD"      },
       { "/bll cat <zone> <cat>","HELP_CAT"        },
       { "/bll unused",          "HELP_UNUSED"     },
