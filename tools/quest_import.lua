@@ -110,7 +110,7 @@ for _, id in ipairs(order) do
   local l = qloc[id]
   if type(q) == "table" then
     found = found + 1
-    local e = { l = q.lvl, m = q.min, r = q.race }
+    local e = { l = q.lvl, m = q.min, r = q.race, c = q.class }
     if type(l) == "table" then
       e.t = l.T
       if l.O and l.O ~= "" then
@@ -160,7 +160,7 @@ local fh = io.open("Data/QuestData.lua", "w")
 fh:write("-- Automatisch erzeugt von tools/quest_import.lua\n")
 fh:write("-- Quelle: pfQuest und seine Serverpakete\n")
 fh:write(string.format("-- Quests: %d (%d belohnen Gegenstaende, Rest Vorquests)\n", found, direct))
-fh:write("-- q: t Titel, l Questlevel, m Mindeststufe, r Rassenmaske,\n")
+fh:write("-- q: t Titel, l Questlevel, m Mindeststufe, r Rassenmaske, c Klassenmaske,\n")
 fh:write("--    p Vorquests, s Geber-NPC, so Geber-Objekt, e Abgabe-NPC, o Ziel\n")
 fh:write("-- u: n Name, z Zone, x/y Koordinaten des Questgebers\n")
 fh:write("-- REINE DATEN. Nicht von Hand bearbeiten.\n\n")
@@ -172,6 +172,7 @@ for _, id in ipairs(sorted(outQ)) do
   if e.l then table.insert(parts, "l=" .. e.l) end
   if e.m then table.insert(parts, "m=" .. e.m) end
   if e.r then table.insert(parts, "r=" .. e.r) end
+  if e.c then table.insert(parts, "c=" .. e.c) end
   if e.p then table.insert(parts, "p={" .. table.concat(e.p, ",") .. "}") end
   if e.s then table.insert(parts, "s=" .. e.s) end
   if e.so then table.insert(parts, "so=" .. e.so) end

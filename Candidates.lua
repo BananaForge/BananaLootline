@@ -907,6 +907,50 @@ end
 -- Bei Uneinigkeit gilt die hoehere Angabe. Ein Teil zu wenig
 -- vorzuschlagen kostet den Spieler nichts; ihn quer ueber den Kontinent
 -- zu einem Gegenstand zu schicken, den er nicht anlegen kann, schon.
+------------------------------------------------------------------
+-- Rufvoraussetzung
+--
+-- Der Import fuehrt sie bei 411 Teilen als "Fraktion - Stufe", etwa
+-- "Argent Dawn - Honored". Das Addon las sie nicht: gemeldet von einem
+-- Tester, Ruf- und Rangteile standen ohne Hinweis in der Liste. Der
+-- Tooltip-Scan erwischte die Zeile nur bei Teilen, die der Client schon
+-- kannte.
+--
+-- Erfuellt ist sie, wenn der eigene Ruf bei dieser Fraktion mindestens
+-- die geforderte Stufe hat. Gelesen wird die Rufliste des Clients; eine
+-- Fraktion, die dort nicht steht (eingeklappte Gruppe, anderssprachiger
+-- Client), gilt als nicht erfuellt - lieber ein Teil zu wenig als eines,
+-- das man nicht kaufen kann. /bll locked zeigt sie trotzdem.
+------------------------------------------------------------------
+
+local STANDING = { Hated = 1, Hostile = 2, Unfriendly = 3, Neutral = 4,
+                   Friendly = 5, Honored = 6, Revered = 7, Exalted = 8 }
+
+function Cand:ReadReputation()
+  local rep = {}
+  if GetNumFactions and GetFactionInfo then
+    for i = 1, GetNumFactions() do
+      local name, _, standing, _, _, _, isHeader = GetFactionInfo(i)
+      if name and not isHeader and standing then rep[name] = standing end
+    end
+  end
+  self.reputation = rep
+  return rep
+end
+
+-- Text der nicht erfuellten Rufvoraussetzung, sonst nil.
+function Cand:RepLock(itemID)
+  local db = itemID and BLL.ItemDB and BLL.ItemDB:Get(itemID)
+  local req = db and db.rep
+  if not req then return nil end
+  local _, _, faction, standing = string.find(req, "^(.-) %- (%a+)$")
+  local need = standing and STANDING[standing]
+  if not faction or not need then return nil end
+  local have = (self.reputation or self:ReadReputation())[faction]
+  if have and have >= need then return nil end
+  return req
+end
+
 function Cand:RequiredLevel(entry, itemID)
   local r = entry.r or 0
   if itemID and BLL.ItemDB and BLL.ItemDB.loaded then
@@ -928,6 +972,9 @@ function Cand:IsUsable(entry, class, level, allowedArmor, itemID)
   -- Bogen des PvP-Quartiermeisters nie heran, er stand trotzdem ganz
   -- oben. Mit /bll locked wieder einblendbar.
   if entry.lock and not (BananaLootlineDB and BananaLootlineDB.showLocked) then
+    return false
+  end
+  if not (BananaLootlineDB and BananaLootlineDB.showLocked) and self:RepLock(itemID) then
     return false
   end
 
@@ -1229,7 +1276,7 @@ function Cand:GetUpgrades(slotKey, maxResults, accept, maxScan)
       end
     end
 
-    local lock = entry and entry.lock or nil
+    local lock = (entry and entry.lock) or self:RepLock(u.id)
     if lock and not showLocked then
       -- uebersprungen: nicht frei erhaeltlich
     else
@@ -1678,6 +1725,8 @@ end
 -- span setzt die Vorausplanung fuer diesen einen Lauf ausser Kraft,
 -- gespeichert wird sie dadurch nicht.
 function Cand:Run(span)
+  -- Ruf bei jeder Suche frisch lesen: er aendert sich im Spiel.
+  self:ReadReputation()
   local minLvl, maxLvl = self:Band(span)
   return self:StartIndex(minLvl, maxLvl)
 end

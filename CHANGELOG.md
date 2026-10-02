@@ -2,6 +2,22 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.16
+
+Aus den Rückmeldungen von drei Testern (Schurke 60, Druide 43, Schutzpaladin 57). Alle drei hatten noch ältere Fassungen; was dort gemeldet war und seitdem behoben ist, steht unten am Ende.
+
+- **Absturz `UI.lua: attempt to index local 'qc' (a nil value)` behoben.** Von allen drei Testern gemeldet, beim Schurken an Waffenhand und Schildhand. Der Datenbestand führt acht Teile mit Qualität 6 (Artefakt): die Klingen von Azzinoth und fünf Schmuckstücke ab Stufe 51. Die Farbtabelle kannte nur 0 bis 5; sobald eines davon in einer Liste stand, brach das Zeichnen ab und die Liste blieb leer. Jetzt gibt es Farben für 6 und 7 und einen Rückfall für jede andere Zahl.
+- **Setboni machen ein Teil nicht mehr „unvollständig bewertbar".** Zeilen wie „Set: Reduces the cooldown of your Vanish ability by 30 sec." oder „(5) Set: … restore 35 energy" passten auf kein Muster und galten als unbezifferter Effekt; dann musste jedes Upgrade das angelegte Teil deutlich schlagen. Gleichzeitig zählte ein Setbonus wie „Set: Improves your chance to hit by 2%" bisher doppelt — einmal aus dem Tooltip, einmal über die Setdaten. Setzeilen werden beim Tooltip-Lesen jetzt übersprungen; Setboni bewertet allein SetDB nach der Zahl getragener Teile. Vorschlag des Testers, umgesetzt.
+- **Klassenquests anderer Klassen fallen heraus.** Der Import kennt die Klasse einer Quest nicht, pfQuest schon. `Data/QuestData.lua` führt sie jetzt (632 Klassenquests), und eine Questbelohnung zählt nur, wenn die eigene Klasse die Quest annehmen darf. Beispiel: die Darkmantle-Teile aus „An Earnest Proposition" erscheinen beim Schurken, beim Jäger nicht mehr.
+- **Rufvoraussetzungen werden gelesen.** Der Import führt sie seit Langem bei 411 Teilen („Argent Dawn - Honored"), das Addon nutzte sie nie — nur der Tooltip-Scan erwischte sie, und der läuft nur bei Teilen, die der Client schon kennt. Jetzt liest das Addon bei jeder Suche die Rufliste des Charakters; ein Teil, dessen Ruf man noch nicht hat, gilt als gesperrt wie ein Teil mit PvP-Rang. `/bll locked` zeigt es trotzdem. Eine Fraktion, die in der Rufliste nicht steht (eingeklappte Gruppe), gilt als nicht erreicht. **Im deutschen Client** heissen die Fraktionen anders als im Import; dort gelten Rufteile deshalb vorerst immer als gesperrt.
+- **PvP-Ränge:** Der Export enthält keine Rangangabe. Es bleibt bei der Erkennung über den Tooltip („Requires Knight-Lieutenant"), die greift, sobald der Client das Teil kennt.
+- **Letzte deutsche Texte in englischer Anzeige übersetzt:** Selbsttest („Zonen", „fehlt - Fundorte kommen aus pfQuest"), „NEU" in der Lootline, „Benötigt Stufe" im Ersatz-Tooltip. Die Spec-Namen sind seit 0.22.7 englisch.
+- Neue Tests `tools/test_setlines.lua` und `tools/test_reputation_req.lua`; `tools/test_questinfo.lua` prüft die Klassenquests.
+
+**Aus den Rückmeldungen, mit älteren Fassungen gemeldet und inzwischen behoben:** Inhalte noch nicht offener Phasen (Naxxramas, Ahn'Qiraj, Turm von Karazhan, Rock of Desolation) seit 0.22.6; Selbsttest mit falscher Version seit 0.22.6; Vorausplanung 3 bzw. 6 statt 0 seit 0.22.9.
+
+**Offen:** Druide 43 meldete, die Suche finde nichts und `/bll stop` sage „läuft nichts". In der Nachstellung mit 0.22.16 findet die Suche für einen Druiden 43 Zul'Farrak, Stormwrought Ruins und weitere Orte. Wahrscheinlich war es derselbe Zeichenabsturz; bestätigt ist es nicht.
+
 ## 0.22.15
 
 - **Das Questfenster öffnet links neben dem Hauptfenster und liegt davor.** Es lag auf derselben Ebene wie das Hauptfenster und erschien dahinter. Jetzt eine Ebene höher, oben bündig links daneben; reicht der Platz links nicht, rechts daneben. Ist das Hauptfenster zu, in der Bildmitte.

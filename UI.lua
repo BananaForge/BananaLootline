@@ -22,7 +22,19 @@ local QUALITY_COLOR = {
   [3] = { 0.00, 0.44, 0.87 },   -- blau
   [4] = { 0.64, 0.21, 0.93 },   -- lila
   [5] = { 1.00, 0.50, 0.00 },   -- orange
+  [6] = { 0.90, 0.80, 0.50 },   -- Artefakt
+  [7] = { 0.00, 0.80, 1.00 },   -- Erbstueck
 }
+
+-- Farbe einer Qualitaet, nie nil. Der Datenbestand fuehrt acht Teile
+-- mit Qualitaet 6 - die Klingen von Azzinoth und fuenf Schmuckstuecke
+-- ab Stufe 51. Die Tabelle kannte nur 0 bis 5; jeder Charakter, dem
+-- eines davon als Waffe oder Schmuck vorgeschlagen wurde, bekam
+-- "UI.lua: attempt to index local 'qc' (a nil value)" und eine leere
+-- Liste - gemeldet von drei Testern, bei Waffenhand und Schildhand.
+local function QC(q)
+  return QUALITY_COLOR[q or 1] or QUALITY_COLOR[1]
+end
 
 local ROW_HEIGHT = 18
 
@@ -1957,7 +1969,7 @@ function UI:ShowLootline()
 
     for i = 1, table.getn(grp.items) do
       local it = grp.items[i]
-      local qc = QUALITY_COLOR[it.quality or 1]
+      local qc = QC(it.quality)
       local hex = string.format("|cff%02x%02x%02x", qc[1] * 255, qc[2] * 255, qc[3] * 255)
 
       local tag = ""
@@ -2002,7 +2014,7 @@ function UI:ShowLootline()
         local txt = (p >= 1000) and (">999%") or string.format("+%.0f%%", p)
         right = "|cff00ff00" .. txt .. "|r"
       else
-        right = "|cff44ff44NEU|r"
+        right = "|cff44ff44" .. BLL.L["NEW_SLOT"] .. "|r"
       end
 
       table.insert(list, {
@@ -2168,7 +2180,7 @@ function UI:ShowDetail(slotKey)
   cur.hasItem = (data ~= nil)
 
   if data then
-    local c = QUALITY_COLOR[data.quality or 1]
+    local c = QC(data.quality)
     local hex = string.format("|cff%02x%02x%02x", c[1] * 255, c[2] * 255, c[3] * 255)
     FitText(measure, cur.name, hex, data.name or "?", "|r", 308, 16, "OUTLINE")
 
@@ -2268,7 +2280,7 @@ function UI:ShowDetail(slotKey)
     local s1 = u.sources and u.sources[1]
     row.questID = (s1 and s1.stype == "Q") and s1.id or nil
 
-    local qc = QUALITY_COLOR[u.quality or 1]
+    local qc = QC(u.quality)
     local hex = string.format("|cff%02x%02x%02x", qc[1] * 255, qc[2] * 255, qc[3] * 255)
 
     -- Zeile 1: Name und Wert. Unter 10 mit Nachkommastelle, sonst
@@ -2434,14 +2446,14 @@ function UI:FallbackTooltip(tip, itemID)
     return
   end
 
-  local qc = QUALITY_COLOR[e.quality or 1]
+  local qc = QC(e.quality)
   tip:AddLine(e.name or ("Item " .. itemID), qc[1], qc[2], qc[3])
 
   if e.ilvl then
     tip:AddLine("|cff888888Itemlevel " .. e.ilvl .. "|r")
   end
   if e.reqlevel then
-    tip:AddLine("|cff888888Benoetigt Stufe " .. e.reqlevel .. "|r")
+    tip:AddLine("|cff888888" .. string.format(BLL.L["REQ_LEVEL"], e.reqlevel) .. "|r")
   end
 
   if e.stats then
@@ -2502,7 +2514,7 @@ function UI:Refresh()
       b.icon:SetAlpha(1)
       local q = data and data.quality
       if q and q > 1 then
-        local c = QUALITY_COLOR[q]
+        local c = QC(q)
         b.border:SetVertexColor(c[1], c[2], c[3])
         b.border:Show()
       else

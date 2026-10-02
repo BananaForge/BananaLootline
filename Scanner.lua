@@ -91,11 +91,24 @@ function Scanner:GetItemID(link)
   return tonumber(id)
 end
 
+-- Setboni stehen im Tooltip als "Set: ..." (aktiv) oder "(3) Set: ..."
+-- (noch nicht aktiv) - im deutschen Client genauso. Bewertet werden sie
+-- ueber SetDB, mit der Zahl der tatsaechlich getragenen Teile. Aus dem
+-- Tooltip gelesen zaehlten sie doppelt oder, haeufiger: eine Zeile wie
+-- "Set: Reduces the cooldown of your Vanish ability by 30 sec." oder
+-- "Set: Restores 2 energy..." passte auf kein Muster, galt als
+-- unbezifferter Effekt, und das ganze Teil wurde als nicht vollstaendig
+-- bewertbar markiert - gemeldet von einem Tester mit Setteilen.
+local SET_LINE = { "^Set:", "^%(%d+%) Set:" }
+
 local function ShouldSkip(line)
   for i = 1, table.getn(BLL.SKIP_PREFIX) do
     if string.find(line, BLL.SKIP_PREFIX[i], 1, true) then
       return true
     end
+  end
+  for i = 1, table.getn(SET_LINE) do
+    if string.find(line, SET_LINE[i]) then return true end
   end
   return false
 end
