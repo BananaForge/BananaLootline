@@ -136,6 +136,7 @@ Settings from an earlier OctoLootline install are carried over automatically.
 |---|---|
 | `/bll` | Open / close the window |
 | `/bll up [n]` | Search for upgrades, `n` overrides the span from `/bll ahead` for this run |
+| `/bll ilvl <min-max>` | Only suggest items in this item level range (`off` removes it) |
 | `/bll ahead <n>` | Levels the search reaches ahead (default 0 = equippable only) |
 | `/bll lang de\|en\|auto` | Display language, including all status messages |
 | `/bll spec` | Show detected spec and talent points per tree |

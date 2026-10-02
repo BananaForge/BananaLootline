@@ -285,12 +285,28 @@ function Weights:FindSpec(text)
 end
 
 function Weights:Get()
-  -- Nutzerueberschreibung hat Vorrang
-  if BananaLootlineDB and BananaLootlineDB.weights then
+  local class = BLL.player and BLL.player.class
+
+  -- Spezialisierung zuerst bestimmen, auch wenn gleich eigene Gewichte
+  -- gelten. Frueher kehrte Get() bei eigenen Gewichten sofort zurueck:
+  -- die Unterzeile zeigte dann "keine Spez. erkannt", und eine Wahl im
+  -- Menue aenderte sichtbar nichts - gemeldet von einem Tester auf
+  -- Stufe 60 mit 51 Talentpunkten.
+  local tab, manual = self:ActiveTab()
+  local specs = self.SPECS[class or ""]
+  self.specManual = manual
+  if tab and specs and specs[tab] then
+    self.activeSpec = self:SpecName(specs[tab].name)
+  else
+    self.activeSpec = nil
+  end
+
+  -- Eigene Gewichte (/bll weight) haben Vorrang vor Klasse und Spec.
+  self.customWeights = (BananaLootlineDB and BananaLootlineDB.weights) and true or nil
+  if self.customWeights then
     return BananaLootlineDB.weights
   end
 
-  local class = BLL.player and BLL.player.class
   local base = self.DEFAULTS[class or ""] or self.DEFAULTS["WARRIOR"]
 
   local out = {}
@@ -298,16 +314,10 @@ function Weights:Get()
 
   -- Spezialisierung ueberschreibt einzelne Werte. Die eigene Wahl
   -- schlaegt die Erkennung.
-  local tab, manual = self:ActiveTab()
-  local specs = self.SPECS[class or ""]
-  self.specManual = manual
   if tab and specs and specs[tab] then
-    self.activeSpec = self:SpecName(specs[tab].name)
     for k, v in pairs(specs[tab]) do
       if k ~= "name" then out[k] = v end
     end
-  else
-    self.activeSpec = nil
   end
 
   for k, v in pairs(COMMON) do

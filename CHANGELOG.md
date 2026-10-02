@@ -2,6 +2,16 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.17
+
+Aus der zweiten Runde eines Testers (Schurke 60, noch mit 0.22.11).
+
+- **Teile, deren Quellen alle in gesperrten Phasen liegen, fallen ganz heraus.** Die Phasensperre entfernte bisher nur die Quellen; das Teil blieb in „Pro Item" stehen, mit „No source data". Der Tester bekam so fast nur Drake Fang Talisman (BWL), Shieldrender Talisman (Rock of Desolation), Jom Gabbar (AQ40), Slayer's Crest und Bonescythe Gauntlets (Naxxramas). Jetzt gilt: hat jede Quelle einen Ort und ist jeder Ort gesperrt, kommt das Teil in keine Liste. 809 Teile sind davon betroffen. Wird die Phase geöffnet (Termin oder `/bll phase <n> on`), sind sie wieder da. Hergestellte Teile und Teile mit einer Quelle ohne Ort bleiben.
+- **„Pro Item" zeigt standardmässig nur Teile mit Fundort.** Neuer Haken „Nur mit Fundort" oben rechts, an derselben Stelle wie „Händler zeigen" im Wegplan. Ohne Haken erscheinen wie bisher auch Teile ohne erreichbare Quelle — Altlasten der Datenbank, etwa ungenutzte Doppelversionen von Klassenteilen, die der Tester ansprach.
+- **Neu: `/bll ilvl 60-80`.** Vorschlag des Testers: begrenzt die Vorschläge auf einen Itemlevel-Bereich. `/bll ilvl 60` setzt nur die Untergrenze, `/bll ilvl off` hebt den Filter auf, `/bll ilvl` allein zeigt den Stand. Teile ohne Itemlevel im Import bleiben drin.
+- **Spezialisierung bei eigenen Gewichten.** Wer mit `/bll weight` eigene Gewichte gesetzt hat, sah „no spec detected", und die Wahl im Menü änderte sichtbar nichts: `Weights:Get()` kehrte bei eigenen Gewichten sofort zurück, bevor die Spezialisierung bestimmt war. Jetzt wird sie immer bestimmt und angezeigt; die Unterzeile sagt zusätzlich „(custom weights)", und eine Spec-Wahl weist darauf hin, dass die eigenen Gewichte vorgehen und `/bll weight reset` sie aufhebt. Vermutete Ursache der Meldung, nicht bestätigt.
+- Neue Tests `tools/test_lockedsources.lua` und `tools/test_ilvlfilter.lua`; `tools/test_specchoice.lua` prüft eigene Gewichte.
+
 ## 0.22.16
 
 Aus den Rückmeldungen von drei Testern (Schurke 60, Druide 43, Schutzpaladin 57). Alle drei hatten noch ältere Fassungen; was dort gemeldet war und seitdem behoben ist, steht unten am Ende.

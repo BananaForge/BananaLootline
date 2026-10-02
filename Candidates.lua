@@ -951,6 +951,31 @@ function Cand:RepLock(itemID)
   return req
 end
 
+------------------------------------------------------------------
+-- Itemlevel-Filter (/bll ilvl 60-80)
+--
+-- Vorschlag eines Testers: damit laesst sich von Hand eingrenzen, aus
+-- welchen Teilen das Addon waehlt. Auf Stufe 60 tragen fast alle Teile
+-- Anforderungsstufe 60; erst das Itemlevel trennt Questkram von
+-- Raidbeute. Teile ohne Itemlevel im Import bleiben drin.
+------------------------------------------------------------------
+
+function Cand:IlvlRange()
+  local db = BananaLootlineDB
+  return db and db.ilvlMin, db and db.ilvlMax
+end
+
+function Cand:IlvlAllows(itemID)
+  local lo, hi = self:IlvlRange()
+  if not lo and not hi then return true end
+  local e = BLL.ItemDB and BLL.ItemDB:Get(itemID)
+  local ilvl = e and e.ilvl
+  if not ilvl then return true end
+  if lo and ilvl < lo then return false end
+  if hi and ilvl > hi then return false end
+  return true
+end
+
 function Cand:RequiredLevel(entry, itemID)
   local r = entry.r or 0
   if itemID and BLL.ItemDB and BLL.ItemDB.loaded then
@@ -1090,7 +1115,9 @@ function Cand:GetUpgrades(slotKey, maxResults, accept, maxScan)
 
   for itemID, srcLevel in pairs(self.pool) do
     local entry = cache[itemID]
-    if entry and not entry.skip then
+    if entry and not entry.skip
+       and not (BLL.Sources.OnlyLockedSources and BLL.Sources:OnlyLockedSources(itemID))
+       and self:IlvlAllows(itemID) then
       local slots = self.INVTYPE_SLOTS[entry.e or ""]
       local fits = false
       if slots then

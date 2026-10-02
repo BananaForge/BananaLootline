@@ -17,7 +17,7 @@ local L = BLL.L
 -- wird die Version in der TOC; BLL:Version() liest sie von dort.
 -- Bis 0.22.5 stand hier eine zweite, von Hand gepflegte Nummer, und
 -- sie lief auseinander: die TOC sagte 0.22.5, der Selbsttest 0.21.1.
-BLL.VERSION_FALLBACK = "0.22.16"
+BLL.VERSION_FALLBACK = "0.22.17"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -600,6 +600,32 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       BLL:Print(string.format(L["RATE_INFO"], BananaLootlineDB.queryRate or 8))
     end
 
+  elseif command == "ilvl" then
+    -- /bll ilvl 60-80, /bll ilvl 60 (nur Untergrenze), /bll ilvl off
+    local _, _, a, b = string.find(param or "", "^(%d+)%s*%-%s*(%d+)$")
+    local _, _, single = string.find(param or "", "^(%d+)$")
+    if a then
+      a, b = tonumber(a), tonumber(b)
+      if a > b then a, b = b, a end
+      BananaLootlineDB.ilvlMin, BananaLootlineDB.ilvlMax = a, b
+      BLL:Print(string.format(L["ILVL_SET"], a, b))
+    elseif single then
+      BananaLootlineDB.ilvlMin, BananaLootlineDB.ilvlMax = tonumber(single), nil
+      BLL:Print(string.format(L["ILVL_MIN"], tonumber(single)))
+    elseif param == "off" then
+      BananaLootlineDB.ilvlMin, BananaLootlineDB.ilvlMax = nil, nil
+      BLL:Print(L["ILVL_OFF"])
+    else
+      local lo, hi = BLL.Candidates:IlvlRange()
+      if lo or hi then
+        BLL:Print(string.format(L["ILVL_SET"], lo or 0, hi or 999))
+      else
+        BLL:Print(L["ILVL_OFF"])
+      end
+      BLL:Print(L["USAGE_ILVL"])
+    end
+    if BLL.UI and BLL.UI.frame and BLL.UI.frame:IsVisible() then BLL.UI:Refresh() end
+
   elseif command == "minimap" then
     if BLL.Minimap:Toggle() then
       BLL:Print(L["MINIMAP_SHOWN"])
@@ -696,6 +722,7 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
         BLL:Print(string.format(L["SPEC_SET"], BLL.Weights.activeSpec or "?"))
       end
     end
+    if BLL.Weights.customWeights then BLL:Print(L["CUSTOM_WEIGHTS_NOTE"]) end
     -- Die Gewichte aendern die Rangfolge.
     BLL.Candidates:Run()
 
@@ -820,6 +847,7 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       { "/bll spec <1-3|auto>", "HELP_SPEC_SET"   },
       { "/bll why <itemID>",    "HELP_WHY"        },
       { "/bll minimap",         "HELP_MINIMAP"    },
+      { "/bll ilvl <min-max>",  "HELP_ILVL"       },
       { "/bll ahead <n>",       "HELP_AHEAD"      },
       { "/bll cat <zone> <cat>","HELP_CAT"        },
       { "/bll unused",          "HELP_UNUSED"     },

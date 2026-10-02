@@ -616,6 +616,7 @@ function UI:ChooseSpec(tab)
   else
     BLL:Print(BLL.L["SPEC_AUTO"])
   end
+  if BLL.Weights.customWeights then BLL:Print(BLL.L["CUSTOM_WEIGHTS_NOTE"]) end
   if BLL.Candidates and BLL.Candidates.Run then
     BLL.Candidates:Run()
   else
@@ -1357,14 +1358,25 @@ function UI:BuildDetailPane()
   vendText:SetTextColor(0.7, 0.7, 0.7)
   vend.label = vendText
 
+  -- Derselbe Haken dient zwei Ansichten: im Wegplan "Haendler zeigen",
+  -- in "Pro Item" "nur mit Fundort". this.mode sagt, welcher gilt.
   vend:SetScript("OnClick", function()
-    BananaLootlineDB.showVendors = this:GetChecked() and true or nil
+    if this.mode == "sourced" then
+      BananaLootlineDB.showUnsourced = (not this:GetChecked()) and true or nil
+    else
+      BananaLootlineDB.showVendors = this:GetChecked() and true or nil
+    end
     BLL.UI:Refresh()
   end)
   vend:SetScript("OnEnter", function()
     GameTooltip:SetOwner(this, "ANCHOR_LEFT")
-    GameTooltip:SetText(BLL.L["SHOW_VENDORS"])
-    GameTooltip:AddLine(BLL.L["VENDOR_TOOLTIP"], 0.8, 0.8, 0.8, 1)
+    if this.mode == "sourced" then
+      GameTooltip:SetText(BLL.L["ONLY_SOURCED"])
+      GameTooltip:AddLine(BLL.L["ONLY_SOURCED_TIP"], 0.8, 0.8, 0.8, 1)
+    else
+      GameTooltip:SetText(BLL.L["SHOW_VENDORS"])
+      GameTooltip:AddLine(BLL.L["VENDOR_TOOLTIP"], 0.8, 0.8, 0.8, 1)
+    end
     GameTooltip:Show()
   end)
   vend:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -1781,6 +1793,7 @@ function UI:ResetList(view)
   -- Der Haendlerhaken gehoert nur zum Wegplan.
   if pane.vendorCheck then
     if view == "lootline" then
+      pane.vendorCheck.mode = "vendors"
       pane.vendorCheck.label:SetText(BLL.L["SHOW_VENDORS"])
       pane.vendorCheck:SetChecked(BananaLootlineDB
         and BananaLootlineDB.showVendors or false)
@@ -2157,9 +2170,12 @@ function UI:ShowDetail(slotKey)
     pane.llRows[i]:Hide()
   end
   if pane.scroll then pane.scroll:Hide() end
+  -- In "Pro Item" wird der Haken zu "nur mit Fundort".
   if pane.vendorCheck then
-    pane.vendorCheck:Hide()
-    pane.vendorCheck.label:SetText("")
+    pane.vendorCheck.mode = "sourced"
+    pane.vendorCheck.label:SetText(BLL.L["ONLY_SOURCED"])
+    pane.vendorCheck:SetChecked(not (BananaLootlineDB and BananaLootlineDB.showUnsourced))
+    pane.vendorCheck:Show()
   end
   pane.listView = nil
   -- Auch die Daten wegraeumen, nicht nur die Zeilen verstecken. Sonst
@@ -2250,7 +2266,15 @@ function UI:ShowDetail(slotKey)
     return
   end
 
-  local ups = BLL.Candidates:GetUpgrades(slotKey, table.getn(pane.rows))
+  -- Standard: nur Teile, zu denen eine erreichbare Quelle bekannt ist.
+  -- Ohne Haken auch die ohne Fundort (Altlasten der Datenbank, Teile
+  -- ausser Reichweite).
+  local accept, scan = nil, nil
+  if not (BananaLootlineDB and BananaLootlineDB.showUnsourced) then
+    accept = function(u) return u.sources and table.getn(u.sources) > 0 end
+    scan = BLL.Candidates.LOOTLINE_SCAN
+  end
+  local ups = BLL.Candidates:GetUpgrades(slotKey, table.getn(pane.rows), accept, scan)
   local n = table.getn(ups or {})
   if n == 0 then
     local nothing = "|cff888888"
@@ -2537,7 +2561,8 @@ function UI:Refresh()
     (p.name or "?") .. "  -  " .. (BLL.locale == "deDE" and "Stufe " or "Level ")
     .. (p.level or 0) .. " " .. (p.class or "?")
     .. (spec and ("  |cffffcc00" .. spec .. "|r"
-          .. (BLL.Weights.specManual and ("|cff888888 (" .. BLL.L["SPEC_MANUAL"] .. ")|r") or "")) or
+          .. (BLL.Weights.specManual and ("|cff888888 (" .. BLL.L["SPEC_MANUAL"] .. ")|r") or "")
+          .. (BLL.Weights.customWeights and ("|cffff8800 (" .. BLL.L["CUSTOM_WEIGHTS"] .. ")|r") or "")) or
         ("  |cff888888(" .. BLL.L["NO_SPEC"] .. ")|r"))
     .. (BLL.Sources.available and "" or ("   |cffff8800(" .. BLL.L["NO_PFQUEST_SHORT"] .. ")|r"))
   )
