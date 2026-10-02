@@ -1,7 +1,7 @@
 -- Automatisch erzeugt von tools/octo_import.py
 -- Quelle: OctoWoW-Export (octowow.st/db)
--- Erzeugt: 2026-10-01 16:57:41
--- Eintraege: 137
+-- Erzeugt: 2026-10-02 06:04:52
+-- Eintraege: 142
 -- Zonennamen zu den IDs aus SourceData.lua.
 -- Herkunft: pfQuest. Der Nummernkreis des OctoWoW-
 -- Exports ist nicht eindeutig, siehe octo_import.py.
@@ -28,6 +28,7 @@ BananaLootlineZoneNames = {
 [38]="Loch Modan",
 [40]="Westfall",
 [41]="Deadwind Pass",
+[42]="Darkshire",
 [44]="Redridge Mountains",
 [45]="Arathi Highlands",
 [46]="Burning Steppes",
@@ -60,6 +61,8 @@ BananaLootlineZoneNames = {
 [408]="Gillijim's Isle",
 [409]="Lapidis Isle",
 [440]="Tanaris",
+[449]="The Master's Glaive",
+[450]="Remtravel's Excavation",
 [490]="Un'Goro Crater",
 [491]="Razorfen Kraul",
 [493]="Moonglade",
@@ -71,6 +74,8 @@ BananaLootlineZoneNames = {
 [721]="Gnomeregan",
 [722]="Razorfen Downs",
 [796]="Scarlet Monastery",
+[820]="The Golden Plains",
+[822]="Frostmane Hollow",
 [876]="GM Island",
 [978]="Zul'Farrak",
 [1116]="Feathermoon Stronghold",

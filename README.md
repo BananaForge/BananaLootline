@@ -238,7 +238,7 @@ python3 tools/octo_import.py <export directory> --out BananaLootline \
   --objects <pfQuest objects.lua>
 ```
 
-Each option can be given several times; later files override earlier ones, so pass the server-specific package last. The run takes about 13 seconds over the 736 MB export and reduces 2.1 million drop rows to roughly 25,000 source rows by keeping the three best sources per item and kind.
+Each option can be given several times; later files override earlier ones, so pass the server-specific package last. The data in this repository is built from [pfQuest](https://github.com/shagu/pfQuest), [pfQuest-turtle](https://github.com/shagu/pfQuest-turtle) and [pfQuest-octo](https://github.com/paokkerkir/pfQuest-octo), in that order. NPCs that pfQuest cannot place get their zone from the export's location number, calibrated against the NPCs pfQuest does know (see `vote_locations` in the importer). The run takes about 13 seconds over the 736 MB export and reduces 2.1 million drop rows to roughly 25,000 source rows by keeping the three best sources per item and kind.
 
 ---
 

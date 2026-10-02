@@ -27,11 +27,13 @@ for t in tools/test_*.lua; do
   fi
 done
 
-# 4. Konvertertest
-if python3 tools/test_build.py | tail -1 | grep -q "ALLE TESTS OK"; then
-  echo "ok    tools/test_build.py"
-else
-  echo "FEHLER tools/test_build.py"; fail=1
-fi
+# 4. Konvertertests
+for t in tools/test_build.py tools/test_locvote.py; do
+  if python3 "$t" | tail -1 | grep -q "ALLE TESTS OK"; then
+    echo "ok    $t"
+  else
+    echo "FEHLER $t"; python3 "$t"; fail=1
+  fi
+done
 
 exit $fail

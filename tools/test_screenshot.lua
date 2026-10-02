@@ -161,6 +161,26 @@ if fang then
 end
 
 ------------------------------------------------------------------
+-- 5b. Frostmane Hollow
+--
+-- turtlelootline.com setzte fuer denselben Jaeger "Frostmane Hollow"
+-- an die Spitze: Belt of Binding und Tribal War Gauntlets zu je 33 %.
+-- Beide standen im Addon ohne Ort, weil pfQuest Hailar the Frigid und
+-- Battlemaster Ubukaz nicht kennt, und fielen aus dem Wegplan.
+------------------------------------------------------------------
+
+for _, id in ipairs({ 116, 150 }) do
+  local list = S:GetItemSources(id)
+  local nm = I[id] and I[id].name or id
+  check(list and list[1], nm .. " hat eine Quelle")
+  if list and list[1] then
+    check(list[1].zone == "Frostmane Hollow",
+      nm .. " faellt in Frostmane Hollow, hat " .. tostring(list[1].zone))
+    check((list[1].chance or 0) > 30, nm .. " mit 33 Prozent")
+  end
+end
+
+------------------------------------------------------------------
 -- 6. Seltene Elitegegner sind als solche erkennbar
 --
 -- "Forest Leather Gloves" und "Forest Leather Bracers" fallen zu je

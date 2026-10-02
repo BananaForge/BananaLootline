@@ -505,15 +505,21 @@ def faction_of(entry):
 
 def build_sources(item, geo, zones_used, npcs_used):
     """geo = (unit_zones, unit_names, quest_givers, object_zones,
-    zone_names). Gegner und Truhen verortet pfQuest, Quests verorten
-    sich selbst ueber ihr Feld "category"."""
-    unit_zones, unit_names, quest_givers, object_zones, zone_names = geo
+    zone_names, loc_zones). Gegner und Truhen verortet pfQuest, Quests
+    verorten sich selbst ueber ihr Feld "category". Kennt pfQuest einen
+    Gegner nicht, hilft sein Feld "location" ueber loc_zones."""
+    unit_zones, unit_names, quest_givers, object_zones, zone_names, \
+        loc_zones = geo
     src = item.get("sources") or {}
     out = {}
 
-    def note(row, npcid, name):
+    def note(row, npcid, name, entry=None):
         npcs_used[npcid] = name or unit_names.get(npcid) or ""
         z = unit_zones.get(npcid)
+        if not z and entry is not None:
+            z = loc_zones.get(first_location(entry))
+        if not z:
+            z = BOSS_ZONES.get(npcid)
         if z:
             row["z"] = z
             zones_used[z] = True
@@ -536,7 +542,7 @@ def build_sources(item, geo, zones_used, npcs_used):
         f = faction_of(e)
         if f:
             row["f"] = f
-        note(row, e["id"], e.get("name"))
+        note(row, e["id"], e.get("name"), e)
         rows.append(row)
     rows.sort(key=lambda r: -(r.get("p") or 0))
     if rows:
@@ -574,7 +580,7 @@ def build_sources(item, geo, zones_used, npcs_used):
             row["f"] = f
         if e.get("tag"):
             row["t"] = e["tag"]
-        note(row, e["id"], e.get("name"))
+        note(row, e["id"], e.get("name"), e)
         vend.append(row)
     if vend:
         out["v"] = vend[:MAX_PER_TYPE]
@@ -691,6 +697,152 @@ def build_sources(item, geo, zones_used, npcs_used):
 #                     Fraktion, Haendlerpreis, Questbelohnung
 #   pfQuest        -> wo ein Gegner steht und wie die Zone heisst
 # ---------------------------------------------------------------------
+
+# ---------------------------------------------------------------------
+# Ortsnummer des Exports als Rueckfall
+#
+# Fuer 704 von 5790 Gegnern mit Beute hat pfQuest keine Koordinaten:
+# OctoWoW-eigene Gegner wie Hailar the Frigid, aber auch viele
+# Instanzbosse, deren Eintrag in pfQuest "coords = {}" lautet. Ohne Ort
+# fiel ihre Beute aus dem Wegplan - 1737 Gegenstaende hatten Quellen,
+# aber keine davon mit Ort.
+#
+# Das Feld "location" ist allein nicht zu deuten (siehe unten), aber
+# es laesst sich eichen: alle Gegner mit derselben Ortsnummer, die
+# pfQuest verortet, stimmen ab. Unter 229 stehen 70 von 73 in
+# Blackrock Spire, unter 2557 alle 15 in Dire Maul, unter 209 alle 26
+# in Zul'Farrak - obwohl pfQuest die 209 "Shadowfang Keep" nennt. Damit
+# ist die Ortsnummer eines unbekannten Gegners so gut wie die seiner
+# Nachbarn.
+#
+# Gezaehlt wird jeder Gegner einmal, nicht jede Dropzeile, sonst
+# entschiede ein einzelner Boss mit 200 Teilen die Wahl.
+#
+# Nummern, unter denen pfQuest keinen einzigen Gegner kennt, sind
+# OctoWoW-eigene Gebiete. Sie stehen mit ihrer eigenen Nummer im
+# Datenbestand; ohne Namen zeigt das Addon "Zone 822", und
+# /bll zone benennt sie. Bekannte Namen stehen in LOCATION_NAMES.
+#
+# Bleibt die Ortsnummer 0 - so bei Ragnaros, Nefarian und den meisten
+# Instanzbossen -, hilft nur BOSS_ZONES: wo ein Boss steht, ist eine
+# Sachangabe zum Spiel. Die Zonennummern sind die, unter denen pfQuest
+# die uebrigen Gegner derselben Instanz fuehrt.
+# ---------------------------------------------------------------------
+
+VOTE_MIN = 3        # mindestens so viele verortete Gegner
+VOTE_SHARE = 0.8    # und so viele davon in derselben Zone
+
+# Namen fuer Ortsnummern, die pfQuest nicht kennt.
+#   822  Frostmane Hollow - Hailar the Frigid, Battlemaster Ubukaz,
+#        Frostmane Oracle; Stufe 13-20. Name laut turtlelootline.com,
+#        die denselben OctoWoW-Bestand anzeigt.
+LOCATION_NAMES = {
+    822: "Frostmane Hollow",
+}
+
+
+MC, BWL, SCHOLO, ST, AV, AQ40 = 2717, 2677, 2057, 1477, 2597, 3428
+STRAT, BRS, WC, GNOME, BRD, DM = 2017, 1583, 718, 721, 1584, 2557
+SILITHUS, VC, RFD, ZG = 1377, 5138, 722, 1977
+
+BOSS_ZONES = {
+    11502: MC,      # Ragnaros
+    11583: BWL,     # Nefarian
+    1853: SCHOLO,   # Darkmaster Gandling
+    10506: SCHOLO,  # Kirtonos the Herald
+    8443: ST,       # Avatar of Hakkar
+    13256: AV,      # Lokholar the Ice Lord
+    13419: AV,      # Ivus the Forest Lord
+    15517: AQ40,    # Ouro
+    10439: STRAT,   # Ramstein the Gorger
+    11143: STRAT,   # Postmaster Malown
+    10808: STRAT,   # Timmy the Cruel
+    10516: STRAT,   # The Unforgiven
+    10264: BRS,     # Solakar Flamewreath
+    10339: BRS,     # Gyth
+    10584: BRS,     # Urok Doomhowl
+    10268: BRS,     # Gizrul the Slavener
+    9596: BRS,      # Bannok Grimaxe
+    10263: BRS,     # Burning Felguard
+    3654: WC,       # Mutanus the Devourer
+    7361: GNOME,    # Grubbis
+    9027: BRD, 9028: BRD, 9029: BRD,   # Ring des Gesetzes
+    9030: BRD, 9031: BRD, 9032: BRD,
+    9537: BRD,      # Hurley Blackbreath
+    14506: DM,      # Lord Hel'nurath
+    15203: SILITHUS, 15204: SILITHUS, 15205: SILITHUS,  # Abyssische Rat
+    15305: SILITHUS, 15206: SILITHUS, 15207: SILITHUS,
+    15208: SILITHUS, 15220: SILITHUS, 15209: SILITHUS,
+    15211: SILITHUS, 15212: SILITHUS, 15307: SILITHUS,
+    643: VC,        # Sneed
+    7355: RFD,      # Tuten'kash
+    7356: RFD,      # Plaguemaw the Rotting
+    15082: ZG, 15083: ZG, 15084: ZG, 15085: ZG,  # Rand des Wahnsinns
+}
+
+
+def first_location(entry):
+    loc = entry.get("location")
+    if isinstance(loc, list) and loc and isinstance(loc[0], int):
+        return loc[0]
+    if isinstance(loc, int):
+        return loc
+    return 0
+
+
+def vote_locations(files, unit_zones, zone_names):
+    """Ortsnummer -> Zone, geeicht an den Gegnern, die pfQuest kennt."""
+    votes = collections.defaultdict(collections.Counter)
+    unknown = collections.Counter()
+    seen = set()
+    for path in files:
+        for line in open(path, encoding="utf-8"):
+            try:
+                raw = json.loads(line)
+            except ValueError:
+                continue
+            src = raw.get("sources") or {}
+            for key in ("dropped-by", "sold-by"):
+                for e in src.get(key) or []:
+                    if not isinstance(e, dict) or not e.get("id"):
+                        continue
+                    if e["id"] in seen:
+                        continue
+                    seen.add(e["id"])
+                    loc = first_location(e)
+                    if not loc:
+                        continue
+                    z = unit_zones.get(e["id"])
+                    if z:
+                        votes[loc][z] += 1
+                    else:
+                        unknown[loc] += 1
+
+    out, stats = {}, collections.Counter()
+    for loc in unknown:
+        v = votes.get(loc)
+        if v:
+            z, n = v.most_common(1)[0]
+            total = sum(v.values())
+            if total >= VOTE_MIN and n >= VOTE_SHARE * total:
+                out[loc] = z
+                stats["abgestimmt"] += 1
+            else:
+                stats["uneindeutig"] += 1
+        else:
+            # Kein einziger Gegner dieser Nummer ist in pfQuest verortet:
+            # ein Gebiet, das es nur auf diesem Server gibt. Die
+            # Verwechslung zwischen Karten- und Gebietsnummer betrifft
+            # die alten Instanzen, und die haben alle Stimmen. Hier
+            # bleibt die Nummer selbst - mit pfQuests Namen, falls
+            # vorhanden (820 "The Golden Plains"), sonst ohne.
+            out[loc] = loc
+            stats["eigene Nummer"] += 1
+            sys.stdout.write("  Ortsnummer %d ohne Stimmen -> %s (%d Gegner)\n"
+                             % (loc, zone_names.get(loc, "ohne Namen"),
+                                unknown[loc]))
+    return out, stats
+
 
 ZONE_NAME = re.compile(r"\[(\d+)\]\s*=\s*\"(.*?)\"")
 UNIT_NAME = re.compile(r"\[(\d+)\]\s*=\s*\"(.*?)\"")
@@ -981,7 +1133,17 @@ def main(argv):
           "%d Questgeber, %d Objekte mit Ort"
           % (len(zone_names), len(unit_names), len(unit_zones),
              len(quest_givers), len(object_zones)))
-    geo = (unit_zones, unit_names, quest_givers, object_zones, zone_names)
+    for loc, name in LOCATION_NAMES.items():
+        if loc in zone_names and zone_names[loc] != name:
+            sys.stderr.write("LOCATION_NAMES %d kollidiert mit %s\n"
+                             % (loc, zone_names[loc]))
+        else:
+            zone_names[loc] = name
+    loc_zones, loc_stats = vote_locations(files, unit_zones, zone_names)
+    print("Ortsnummern: %s" % ", ".join("%d %s" % (n, k) for k, n
+                                         in sorted(loc_stats.items())))
+    geo = (unit_zones, unit_names, quest_givers, object_zones, zone_names,
+           loc_zones)
 
     items, sources, zones_used, npcs_used = {}, {}, {}, {}
     total, skipped = 0, 0

@@ -9,7 +9,14 @@ Aus dem Vergleich mit turtlelootline.com: dort wählt man die Spezialisierung se
 - **Die Spezialisierung lässt sich jetzt von Hand wählen.** Ein Klick auf die Unterzeile im Fenster (Name, Stufe, Klasse) öffnet ein Menü mit „Automatisch" und den drei Talentbäumen. Automatisch bleibt die Voreinstellung und liest wie bisher die Talente ab 10 Punkten. Die eigene Wahl schlägt die Erkennung, steht als „(manuell)" in der Unterzeile und liegt pro Charakter in den SavedVariables. Nach der Wahl läuft die Suche sofort neu, weil sich mit den Gewichten die Rangfolge ändert.
 - **Neu: `/bll spec <1-3|Name|auto>`.** Dasselbe im Chat. Der Name darf abgekürzt und deutsch oder englisch sein, `/bll spec tier` und `/bll spec beast` wählen beide Tierherrschaft. `/bll spec` allein zeigt wie bisher die Talentverteilung und zusätzlich eine eigene Wahl.
 - **Spezialisierungen heissen in der englischen Anzeige jetzt englisch** („Beast Mastery" statt „Tierherrschaft").
-- Neuer Test `tools/test_specchoice.lua`. 30 Testdateien, alle grün.
+- Neuer Test `tools/test_specchoice.lua`.
+
+- **Gegner, die pfQuest nicht kennt, bekommen trotzdem einen Ort.** Belt of Binding und Tribal War Gauntlets fallen zu je 33 % von Hailar the Frigid und Battlemaster Ubukaz — turtlelootline.com setzt dafür Frostmane Hollow an die Spitze des Wegplans. Im Addon fehlten beide, weil der Ort eines Gegners bisher nur aus pfQuest kam, und dort stehen diese OctoWoW-eigenen Gegner nicht. Dasselbe traf viele Instanzbosse, die pfQuest ohne Koordinaten führt. 1737 Teile hatten Quellen, aber keine davon mit Ort.
+- **Die Ortsnummer des Exports wird jetzt geeicht statt verworfen.** Sie ist allein nicht zu deuten, weil sie Gebiets- und Kartennummern mischt. Aber alle Gegner mit derselben Nummer, die pfQuest kennt, stimmen ab: unter 229 stehen 70 von 73 in Blackrock Spire, unter 209 alle 26 in Zul'Farrak. Zugeordnet wird ab drei Stimmen und 80 % Mehrheit; 62 Nummern sind so eindeutig, 8 bleiben offen. Nummern, unter denen pfQuest keinen Gegner kennt, sind Gebiete dieses Servers und behalten ihre eigene Nummer — 822 heisst Frostmane Hollow (Name laut turtlelootline.com), 820 The Golden Plains.
+- **Instanzbosse ohne Ortsnummer stehen in einer Tabelle.** Ragnaros, Nefarian, Gandling, der Avatar von Hakkar, die Arena in Blackrock Depths, die Bosse in Stratholme und Blackrock Spire, der Abyssische Rat in Silithus und weitere — 47 Gegner, deren Ort eine Sachangabe zum Spiel ist.
+- Teile mit Quelle, aber ohne Ort: **1737 → 1288**. Davon sind 1017 reine Herstellung, die keinen Ort braucht. Teile, die nur von Gegnern fallen und keinen Ort haben: **359 → 90**. Bereits vorhandene Orte haben sich nicht verändert.
+- Der Import läuft mit den öffentlichen pfQuest-Paketen von GitHub (pfQuest, pfQuest-turtle, pfQuest-octo) und ergibt ohne diese Änderung byte-genau den bisherigen Datenstand.
+- Neuer Test `tools/test_locvote.py`; `tools/test_screenshot.lua` prüft Frostmane Hollow. 31 Testdateien, alle grün.
 
 Beim Jäger ändert die Wahl an den Gewichten noch nichts: die drei Talentbäume nutzen bisher dieselben Klassenwerte, weil die Quelle sie nicht unterscheidet.
 
