@@ -265,9 +265,24 @@ end
 -- spaeter zeigen soll.
 local REACH_MARGIN = 10
 
+-- Klassenmaske einer Quest aus Data/QuestData.lua (pfQuest "class").
+function Sources:QuestClassMask(questID)
+  local qd = BananaLootlineQuestData
+  local q = qd and qd.q and questID and qd.q[questID]
+  return q and q.c or nil
+end
+
 function Sources:IsReachable(entry)
   -- Quest der Gegenfraktion: existiert, aber nicht fuer diesen Charakter
   if entry.stype == "Q" and not self:RaceAllows(entry.questRace) then
+    return false
+  end
+
+  -- Klassenquest einer anderen Klasse. Gemeldet von einem Tester:
+  -- Belohnungen aus Klassenquests standen bei allen Klassen in der
+  -- Liste. Der Import kennt die Klasse einer Quest nicht, pfQuest schon.
+  if entry.stype == "Q" and entry.questClass and BLL.ItemDB and BLL.player
+     and not BLL.ItemDB:MaskAllows(entry.questClass, BLL.player.class) then
     return false
   end
 
@@ -436,6 +451,7 @@ function Sources:ImportedSources(itemID)
       zone       = r.z and self:ZoneName(r.z) or nil,
       zoneID     = r.z,
       giver      = r.g and self:UnitName(r.g) or nil,
+      questClass = self:QuestClassMask(r.q),
       sure       = true,
       imported   = true,
     })

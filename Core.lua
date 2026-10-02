@@ -17,7 +17,7 @@ local L = BLL.L
 -- wird die Version in der TOC; BLL:Version() liest sie von dort.
 -- Bis 0.22.5 stand hier eine zweite, von Hand gepflegte Nummer, und
 -- sie lief auseinander: die TOC sagte 0.22.5, der Selbsttest 0.21.1.
-BLL.VERSION_FALLBACK = "0.22.15"
+BLL.VERSION_FALLBACK = "0.22.16"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -300,9 +300,8 @@ function BLL:SelfTest()
   local nZone = Count(BananaLootlineZoneNames)
   local src   = (nSrc or 0) > 0
   out:AddMessage("  SourceData " .. Mark(src) .. " "
-    .. (src and ((nSrc or 0) .. " Items, " .. (nNpc or 0) .. " NPCs, "
-                 .. (nZone or 0) .. " Zonen")
-            or "fehlt - Fundorte kommen aus pfQuest"))
+    .. (src and string.format(L["ST_SRC_COUNT"], nSrc or 0, nNpc or 0, nZone or 0)
+            or L["ST_SRC_NONE"]))
   if not src then warn = warn + 1 end
 
   ----------------------------------------------------------------

@@ -57,6 +57,17 @@ print(text)
 -- Unbekannte Quest: kein Absturz
 local t2 = QI:Text(99999999)
 check(t2 and string.find(t2, "keine Einzelheiten", 1, true), "unbekannte Quest wird gemeldet")
+-- Klassenquests: Darkmantle-Teile (Schurken-Set) aus "An Earnest
+-- Proposition" gehoeren nur Schurken. Gemeldet: Belohnungen aus
+-- Klassenquests standen bei allen Klassen.
+BLL.player = { class = "ROGUE", level = 60 }
+local r1 = BLL.Sources:GetItemSources(22004)
+check(r1 and r1[1] and r1[1].stype == "Q", "Schurke bekommt die Schurkenquest")
+BLL.player = { class = "HUNTER", level = 60 }
+local r2 = BLL.Sources:GetItemSources(22004)
+check(not r2 or table.getn(r2) == 0, "Jaeger bekommt sie nicht")
+BLL.player = { class = "HUNTER", level = 16 }
+
 -- Lage: links neben dem Hauptfenster, sonst rechts, ohne Hauptfenster mittig
 local function fr(left, visible)
   return { pts = nil, ClearAllPoints = function(self) self.pts = nil end,
