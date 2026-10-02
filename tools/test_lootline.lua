@@ -182,4 +182,38 @@ if bar then
   check(drop and drop.sourceLevel == 23, "und die Stufe des Gegners")
 end
 
+------------------------------------------------------------------
+-- Die besten Teile eines Platzes haben keinen Ort
+--
+-- Gemeldet an einem Stufe-16-Jaeger: beim Guertel lagen "Deviate Scale
+-- Belt" (hergestellt), "Dark Leather Belt" und "Mosshide Cinch" (ohne
+-- Fundort) vorn. Der Wegplan nahm die drei besten je Platz und warf sie
+-- erst danach hinaus - "Belt of Binding" aus Frostmane Hollow (33 %)
+-- kam nie in Betracht. turtlelootline.com setzte genau diesen Ort an
+-- die Spitze.
+------------------------------------------------------------------
+
+table.insert(BLL.Gear.SLOTS, { key = "LegsSlot" })
+for id = 80, 82 do
+  SOURCES[id] = {}
+  BananaLootlineDB.itemcache[id] = { e = "INVTYPE_LEGS", st = { AGI = 60 - id + 80 },
+                                     r = 15, q = 3, n = "Ohne Ort " .. id }
+  Cand.pool[id] = 15
+end
+SOURCES[83] = { { stype = "U", name = "Hailar the Frigid", zone = "Frostmane Hollow",
+                  chance = 33.33, level = 16, elite = 1 } }
+BananaLootlineDB.itemcache[83] = { e = "INVTYPE_LEGS", st = { AGI = 12 }, r = 15, q = 3,
+                                   n = "Belt of Binding" }
+Cand.pool[83] = 15
+
+local fh = zones()["Frostmane Hollow"]
+check(fh ~= nil, "Frostmane Hollow erscheint, obwohl drei bessere Teile keinen Ort haben")
+check(fh and fh.items[1] and fh.items[1].id == 83, "mit dem verorteten Teil")
+check(fh and fh.category == "DUNGEON", "als Dungeon")
+
+-- Die Einzelansicht zeigt weiterhin die drei besten, Ort hin oder her.
+ups = Cand:GetUpgrades("LegsSlot", 3)
+check(ups and table.getn(ups) == 3 and ups[1].id == 80,
+  "die Einzelansicht bleibt nach Zuwachs sortiert")
+
 print(ok and "ALLE TESTS OK" or "TESTS FEHLGESCHLAGEN")

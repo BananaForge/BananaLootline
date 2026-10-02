@@ -2,6 +2,14 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.8
+
+Aus dem ersten Spieltest von 0.22.7: Belt of Binding hatte jetzt seinen Ort, Frostmane Hollow stand trotzdem nicht im Wegplan.
+
+- **Der Wegplan sucht je Platz die besten Teile mit Ort, nicht die besten Teile.** Bisher kamen je Rüstungsplatz die drei besten Verbesserungen herein, und erst danach flogen die ohne Ort hinaus. Beim Gürtel eines Stufe-16-Jägers lagen vorn Deviate Scale Belt (hergestellt), Dark Leather Belt und Mosshide Cinch (beide ohne Fundort) — Belt of Binding mit 33 % in Frostmane Hollow kam nie in Betracht, und der Gürtel trug zum Wegplan gar nichts bei. Jetzt rücken die nächstbesten nach, bis drei Teile mit Ort gefunden sind; angesehen werden höchstens 40 je Platz.
+- Die Einzelansicht „Pro Item" bleibt unverändert nach Zuwachs sortiert, mit oder ohne Ort.
+- `tools/test_lootline.lua` stellt den Fall nach: drei bessere Teile ohne Ort, ein schwächeres in Frostmane Hollow.
+
 ## 0.22.7
 
 Aus dem Vergleich mit turtlelootline.com: dort wählt man die Spezialisierung selbst, im Addon stand für einen Stufe-15-Jäger „keine Spez. erkannt".
