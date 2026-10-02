@@ -512,7 +512,7 @@ function UI:Init()
     if BLL.Candidates and BLL.Candidates.PlanAhead then
       return BLL.Candidates:PlanAhead()
     end
-    return BananaLootlineDB.planAhead or 6
+    return BananaLootlineDB.planAhead or 0
   end
 
   local aheadMinus = CreateFrame("Button", nil, aheadBox, "UIPanelButtonTemplate")
@@ -552,6 +552,16 @@ function UI:Init()
   exportBtn:SetScript("OnClick", function()
     UI:ShowExport()
   end)
+
+  -- Version und Urheber rechts unten. Bei Fehlermeldungen ist die
+  -- Version das Erste, was man braucht - hier steht sie, ohne dass
+  -- jemand /bll info kennen muss.
+  local credit = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  credit:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 14)
+  credit:SetJustifyH("RIGHT")
+  credit:SetTextColor(0.55, 0.55, 0.55)
+  credit:SetText("v" .. (BLL:Version() or "?") .. "  |cffffcc33\194\169 Lumihunt|r")
+  self.credit = credit
 
   self.frame = f
   self:BuildSlotList()

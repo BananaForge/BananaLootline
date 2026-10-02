@@ -2,6 +2,17 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.9
+
+Aus dem zweiten Spieltest: Belt of Binding fehlte weiter, auch in „Pro Item", wo es mit +12 vor Belt of the Fang (+10) hätte stehen müssen.
+
+- **Veraltete „Server liefert nichts"-Markierungen fallen weg.** Eine frühere Fassung hatte Belt of Binding beim Server angefragt, keine Antwort bekommen und es im gespeicherten Itemcache dauerhaft als nicht abrufbar markiert. Diese Markierung überlebte jedes Update, und das Teil erschien in keiner Liste mehr — obwohl der Import längst alle Werte führt und gar keine Anfrage nötig ist. Jetzt gilt die Markierung nur noch für Teile ohne Importwerte. Nachgestellt an den echten Daten: mit der alten Markierung ergibt sich genau die Gürtelliste aus dem Bildschirmfoto, ohne sie steht Belt of Binding mit +12 oben.
+- **Vorausplanung steht jetzt auf 0.** Die Suche zeigt damit nur, was man sofort anlegen kann, wie turtlelootline.com. Wer früher selbst einen Wert eingestellt hat, behält ihn; − und + daneben ändern ihn wie bisher.
+- **Version und „© Lumihunt" rechts unten im Fenster.**
+- `tools/test_preload.lua` prüft beide Fälle der Markierung.
+
+**Tribal War Gauntlets bleibt absichtlich draussen.** Es ist Kette, und Jäger tragen Kette erst ab Stufe 40. turtlelootline.com schlägt es einem Stufe-15-Jäger trotzdem vor.
+
 ## 0.22.8
 
 Aus dem ersten Spieltest von 0.22.7: Belt of Binding hatte jetzt seinen Ort, Frostmane Hollow stand trotzdem nicht im Wegplan.

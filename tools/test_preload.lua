@@ -35,8 +35,18 @@ cache[1] = { skip = 1 }
 Cand:PreloadFromItemDB()
 check(cache[1] and not cache[1].skip, "alte Dauer-Markierung aufgehoben")
 
--- Serverfehler bleiben bestehen (kein erneutes Anfragen)
+-- Serverfehler bleiben bestehen (kein erneutes Anfragen) - aber nur,
+-- wenn der Import keine Werte hat und die Anfrage noetig waere.
+DB[4] = { name = "Ohne Werte", slot = 5, reqlevel = 15, itemclass = 4, subclass = 2 }
+Cand.pool[4] = 15
+cache[4] = { skip = 1, fail = 1 }
+Cand:PreloadFromItemDB()
+check(cache[4] and cache[4].fail, "fail-Markierung bleibt ohne Importwerte")
+
+-- "Belt of Binding": einmal als Serverfehler markiert, fehlte es in
+-- jeder Liste, obwohl der Import alle Werte fuehrt.
 cache[1] = { skip = 1, fail = 1 }
 Cand:PreloadFromItemDB()
-check(cache[1].fail, "fail-Markierung bleibt")
+check(cache[1] and not cache[1].skip and cache[1].st,
+  "fail-Markierung faellt, wenn der Import Werte hat")
 print(ok and "ALLE TESTS OK" or "TESTS FEHLGESCHLAGEN")
