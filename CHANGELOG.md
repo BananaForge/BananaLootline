@@ -2,6 +2,11 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.12
+
+- **Minimap-Knopf mit dem BananaLootline-Logo.** Klick öffnet und schliesst das Fenster, Ziehen verschiebt den Knopf um die Karte; die Position bleibt gespeichert. `/bll minimap` blendet ihn aus und wieder ein. Das Bild liegt als `Images/Minimap.tga` bei, 64 × 64 Pixel mit transparentem Rand. Damit ist der offene Punkt „Es gibt kein Minimap-Symbol" aus 0.22.6 erledigt.
+- Neuer Test `tools/test_minimap.lua`.
+
 ## 0.22.11
 
 Die Diagnose aus 0.22.10 hat den Fehler gefunden. `/bll why 116` meldete für Belt of Binding: im Pool, tragbar, 13,4 Punkte gegen 1,4 beim angelegten Gürtel, Quelle Hailar the Frigid in Frostmane Hollow mit 33 %. Alles richtig — und trotzdem stand es in keiner Liste.
