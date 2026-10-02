@@ -598,6 +598,19 @@ function Cand:PreloadFromItemDB()
       cache[itemID] = nil
       cached = nil
     end
+    -- "Server liefert nichts" gilt nur fuer Teile, die eine Anfrage
+    -- brauchen. Fuehrt der Import Werte, ist die Anfrage ueberfluessig
+    -- und die Markierung hinfaellig. Sie stammt aus Fassungen, in denen
+    -- der Import noch keine Werte hatte, und ueberlebte jedes Update:
+    -- "Belt of Binding" fehlte so bei einem Stufe-16-Jaeger in jeder
+    -- Liste, obwohl es sein bestes Guertel-Upgrade war.
+    if cached and cached.fail then
+      local e = BLL.ItemDB:Get(itemID)
+      if e and e.stats and next(e.stats) then
+        cache[itemID] = nil
+        cached = nil
+      end
+    end
     if not cached then
       local e = BLL.ItemDB:Get(itemID)
       if e then
@@ -818,9 +831,14 @@ end
 -- kein Momentaufnahme-Vergleich: ein Teil, dem zwei Stufen fehlen,
 -- gehoert auf die Liste - sonst sieht man das lohnendste Ziel nicht.
 -- Solche Items werden im Fenster als gesperrt gekennzeichnet.
+-- Voreinstellung 0: nur was man sofort anlegen kann. Bis 0.22.8 waren
+-- es 6 Stufen; turtlelootline.com zeigt ebenfalls nur Tragbares, und
+-- ein Teil "ab 22" hilft einem Stufe-16-Charakter heute nicht.
+Cand.DEFAULT_AHEAD = 0
+
 function Cand:PlanAhead()
   local n = BananaLootlineDB and BananaLootlineDB.planAhead
-  if n == nil then return 6 end
+  if n == nil then return Cand.DEFAULT_AHEAD end
   return n
 end
 
