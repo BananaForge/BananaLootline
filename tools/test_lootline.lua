@@ -97,7 +97,7 @@ end
 -- 1. Standard: kein Haendler, kein ortloser Eintrag
 ------------------------------------------------------------------
 
-BananaLootlineDB.showVendors = nil
+Cand:SetSourceCat("HAENDLER", false)
 local z, groups = zones()
 
 check(z["The Barrens"] == nil, "Haendlerzone erscheint nicht ohne Haken")
@@ -112,7 +112,7 @@ end
 -- 2. Mit Haken erscheint der Haendler
 ------------------------------------------------------------------
 
-BananaLootlineDB.showVendors = true
+Cand:SetSourceCat("HAENDLER", true)
 z = zones()
 check(z["The Barrens"] ~= nil, "mit Haken erscheint die Haendlerzone")
 check(z["Wailing Caverns"] ~= nil, "der Dungeon bleibt daneben bestehen")
@@ -124,7 +124,7 @@ check(z["Wailing Caverns"] ~= nil, "der Dungeon bleibt daneben bestehen")
 -- Weg. Haendlerware gehoert da weiterhin hin.
 ------------------------------------------------------------------
 
-BananaLootlineDB.showVendors = nil
+Cand:SetSourceCat("HAENDLER", false)
 local ups = Cand:GetUpgrades("HeadSlot", 5)
 local found = false
 for i = 1, table.getn(ups or {}) do if ups[i].id == 10 then found = true end end
@@ -215,5 +215,43 @@ check(fh and fh.category == "DUNGEON", "als Dungeon")
 ups = Cand:GetUpgrades("LegsSlot", 3)
 check(ups and table.getn(ups) == 3 and ups[1].id == 80,
   "die Einzelansicht bleibt nach Zuwachs sortiert")
+
+------------------------------------------------------------------
+-- Quellenfilter (Dropdown): Vorschlag eines Testers
+------------------------------------------------------------------
+
+-- Nur Dungeon: Quest- und Weltgruppen verschwinden, Dungeons bleiben
+for _, c in ipairs(Cand.SOURCE_CATS) do Cand:SetSourceCat(c, c == "DUNGEON") end
+local zf = zones()
+check(zf["Wailing Caverns"] ~= nil, "Dungeon bleibt bei Filter Dungeon")
+check(zf["Quests"] == nil, "Questgruppe verschwindet bei Filter Dungeon")
+check(zf["Desolace"] == nil, "Weltgebiet verschwindet bei Filter Dungeon")
+
+-- Nur Quest
+for _, c in ipairs(Cand.SOURCE_CATS) do Cand:SetSourceCat(c, c == "QUEST") end
+zf = zones()
+check(zf["Wailing Caverns"] == nil, "Dungeon verschwindet bei Filter Quest")
+check(zf["Quests"] ~= nil, "Quests bleiben bei Filter Quest")
+
+-- Kategorie einer Quelle
+check(Cand:RowCategory({ stype = "Q", zone = "Wailing Caverns" }) == "QUEST", "Questbelohnung ist QUEST, auch im Dungeon")
+check(Cand:RowCategory({ stype = "V", zone = "The Barrens" }) == "HAENDLER", "Haendler ist HAENDLER")
+check(Cand:RowCategory({ stype = "U", zone = "Wailing Caverns" }) == "DUNGEON", "Drop im Dungeon ist DUNGEON")
+check(Cand:RowCategory({ stype = "U", zone = "Alterac Valley" }) == "SCHLACHTFELD", "Alteractal ist SCHLACHTFELD")
+check(Cand:RowCategory({ stype = "U", zone = "Westfall" }) == "WELT", "Westfall ist WELT")
+
+-- Pro Item: Teile ohne Quelle nur mit NOSOURCE
+for _, c in ipairs(Cand.SOURCE_CATS) do Cand:SetSourceCat(c, not Cand.SOURCE_DEFAULT_OFF[c]) end
+local acc = Cand:SlotViewAccept()
+check(acc and not acc({ sources = {} }), "ohne NOSOURCE fallen Teile ohne Quelle heraus")
+check(acc({ sources = { { stype = "U", zone = "Westfall" } } }), "Weltdrop bleibt")
+check(not acc({ sources = { { stype = "V", zone = "The Barrens" } } }), "Haendlerware faellt standardmaessig heraus")
+for _, c in ipairs(Cand.SOURCE_CATS) do Cand:SetSourceCat(c, true) end
+check(Cand:SlotViewAccept() == nil, "alles an: kein Filter")
+
+-- Alte Haken werden uebernommen
+BananaLootlineDB.sourceFilter = nil
+BananaLootlineDB.showVendors, BananaLootlineDB.showUnsourced = true, nil
+check(Cand:SourceFilter().HAENDLER and not Cand:SourceFilter().NOSOURCE, "Haken Haendler zeigen wird uebernommen")
 
 print(ok and "ALLE TESTS OK" or "TESTS FEHLGESCHLAGEN")

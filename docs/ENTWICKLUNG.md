@@ -214,9 +214,7 @@ BananaLootline prüft nur, ob `BRPP_API` existiert und `ShowRecipe` eine Funktio
 
 **Funktionen**
 - Wunschliste (`BananaLootlineChar.wishlist` angelegt, ungenutzt)
-- Dungeonfilter in der Lootline
 - BiS- und Pre-Raid-BiS-Listen
-- Websync über den Desktop Companion (`Gear:ExportString()`, Kennung `BLL1`)
 - Chatmeldungen der Slash-Befehle folgen noch nicht dem Sprachumschalter
 - Partner-Addon: Spell-ID beim Scan speichern, damit die Crafter-Zuordnung sprachunabhängig wird
 

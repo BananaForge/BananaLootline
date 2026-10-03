@@ -203,17 +203,6 @@ function Gear:Serialize()
   return out
 end
 
--- Kompakter Exportstring zum Kopieren (spaeter fuer den Websync)
-function Gear:ExportString()
-  local g = self:Serialize()
-  local parts = { "BLL1", g.class or "?", tostring(g.level or 0) }
-  for i = 1, table.getn(self.SLOTS) do
-    local slot = self.SLOTS[i]
-    table.insert(parts, tostring(g.slots[slot.key] or 0))
-  end
-  return table.concat(parts, ":")
-end
-
 ------------------------------------------------------------------
 -- Debugausgabe
 ------------------------------------------------------------------

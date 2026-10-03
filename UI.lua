@@ -499,13 +499,22 @@ function UI:Init()
   local MIN_AHEAD, MAX_AHEAD = 0, 20
 
   local aheadBox = CreateFrame("Frame", nil, f)
-  aheadBox:SetWidth(118); aheadBox:SetHeight(20)
+  aheadBox:SetWidth(64); aheadBox:SetHeight(20)
   aheadBox:SetPoint("LEFT", upgradeBtn, "RIGHT", 10, 0)
 
-  local aheadLabel = aheadBox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  aheadLabel:SetPoint("LEFT", aheadBox, "LEFT", 0, 0)
-  aheadLabel:SetTextColor(0.6, 0.6, 0.6)
-  self.aheadLabel = aheadLabel
+  -- Statt "Voraus" links: rechts daneben in kleiner Schrift, was die
+  -- Pfeile tun, und darunter die Stufe, bis zu der gerade gesucht wird.
+  local aheadHint = aheadBox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  aheadHint:SetPoint("BOTTOMLEFT", aheadBox, "RIGHT", 6, 0)
+  aheadHint:SetTextColor(0.8, 0.8, 0.8)
+  SetFontSize(aheadHint, 10)
+  self.aheadHint = aheadHint
+
+  local aheadNow = aheadBox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  aheadNow:SetPoint("TOPLEFT", aheadBox, "RIGHT", 6, -1)
+  aheadNow:SetTextColor(0.55, 0.55, 0.55)
+  SetFontSize(aheadNow, 10)
+  self.aheadNow = aheadNow
 
   local aheadValue = aheadBox:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   aheadValue:SetPoint("RIGHT", aheadBox, "RIGHT", -20, 0)
@@ -555,15 +564,6 @@ function UI:Init()
     b:SetScript("OnEnter", AheadTip)
     b:SetScript("OnLeave", AheadTipOut)
   end
-
-  -- Exportstring
-  local exportBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-  exportBtn:SetWidth(90); exportBtn:SetHeight(20)
-  exportBtn:SetPoint("LEFT", aheadBox, "RIGHT", 6, 0)
-  exportBtn:SetText("Export")
-  exportBtn:SetScript("OnClick", function()
-    UI:ShowExport()
-  end)
 
   -- Version und Urheber rechts unten. Bei Fehlermeldungen ist die
   -- Version das Erste, was man braucht - hier steht sie, ohne dass
@@ -624,6 +624,35 @@ function UI:ChooseSpec(tab)
   end
 end
 
+-- Beschriftung des Quellen-Knopfs: "Quellen: Alle", "Quellen: Dungeon,
+-- Quest" oder "Quellen: 3 von 6", dazu "+ Haendler" / "+ ohne Fundort".
+function UI:SourceButtonText(lootline)
+  local L = BLL.L
+  local C = BLL.Candidates
+  if not (C and C.SourceFilter) then return string.format(L["SRC_BUTTON"], L["SRC_ALL"]) end
+  local f = C:SourceFilter()
+  local main, on = {}, {}
+  for _, c in ipairs(C.SOURCE_CATS) do
+    if not C.SOURCE_DEFAULT_OFF[c] then
+      table.insert(main, c)
+      if f[c] then table.insert(on, L["SRC_" .. c]) end
+    end
+  end
+  local txt
+  if table.getn(on) == table.getn(main) then
+    txt = L["SRC_ALL"]
+  elseif table.getn(on) == 0 then
+    txt = L["SRC_NONE"]
+  elseif table.getn(on) <= 2 then
+    txt = table.concat(on, ", ")
+  else
+    txt = string.format(L["SRC_N"], table.getn(on), table.getn(main))
+  end
+  if f.HAENDLER then txt = txt .. " +" .. L["SRC_HAENDLER"] end
+  if f.NOSOURCE and not lootline then txt = txt .. " +" .. L["SRC_NOSOURCE"] end
+  return string.format(L["SRC_BUTTON"], txt)
+end
+
 function UI:UpdateAhead()
   if not self.aheadValue then return end
   if not (BLL.Candidates and BLL.Candidates.PlanAhead) then return end
@@ -634,8 +663,10 @@ function UI:UpdateAhead()
   else
     self.aheadValue:SetTextColor(1, 0.82, 0)
   end
-  if self.aheadLabel then
-    self.aheadLabel:SetText((BLL.locale == "deDE") and "Voraus" or "Ahead")
+  if self.aheadHint then
+    self.aheadHint:SetText(BLL.L["AHEAD_HINT"])
+    local lvl = (BLL.player and BLL.player.level) or 0
+    self.aheadNow:SetText(string.format(BLL.L["AHEAD_NOW"], math.min(60, lvl + n)))
   end
 end
 
@@ -1339,48 +1370,56 @@ function UI:BuildDetailPane()
   pane.header = header
 
   ----------------------------------------------------------------
-  -- Haken "Haendler zeigen", rechts neben der Ueberschrift.
+  -- Quellen-Dropdown, rechts oben in beiden Ansichten.
   --
-  -- Haendlerware ist sicher zu bekommen und bekommt deshalb den vollen
-  -- Zuwachs angerechnet, waehrend ein Dungeondrop mit seiner Chance
-  -- multipliziert wird. Ungefiltert steht der Haendler damit immer
-  -- oben. Wer einkaufen gehen will, schaltet ihn dazu.
+  -- Ersetzt die Haken "Haendler zeigen" (Wegplan) und "Nur mit
+  -- Fundort" (Pro Item). Mehrfachauswahl: das Menue bleibt beim Klick
+  -- offen, jeder Klick zeichnet die Liste neu. Die Auswahl gilt fuer
+  -- beide Ansichten. Logik in Candidates.lua (Cand:SourceFilter).
   ----------------------------------------------------------------
-  local vend = CreateFrame("CheckButton", "BananaLootlineVendorCheck", pane,
-                           "UICheckButtonTemplate")
-  vend:SetWidth(22); vend:SetHeight(22)
-  vend:SetPoint("TOPRIGHT", pane, "TOPRIGHT", -10, -8)
-  vend:Hide()
+  local srcBtn = CreateFrame("Button", "BananaLootlineSourceButton", pane, "UIPanelButtonTemplate")
+  srcBtn:SetHeight(20); srcBtn:SetWidth(150)
+  srcBtn:SetPoint("TOPRIGHT", pane, "TOPRIGHT", -10, -8)
+  srcBtn:Hide()
 
-  local vendText = pane:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  vendText:SetPoint("RIGHT", vend, "LEFT", -2, 0)
-  SetFontSize(vendText, 11)
-  vendText:SetTextColor(0.7, 0.7, 0.7)
-  vend.label = vendText
-
-  -- Derselbe Haken dient zwei Ansichten: im Wegplan "Haendler zeigen",
-  -- in "Pro Item" "nur mit Fundort". this.mode sagt, welcher gilt.
-  vend:SetScript("OnClick", function()
-    if this.mode == "sourced" then
-      BananaLootlineDB.showUnsourced = (not this:GetChecked()) and true or nil
-    else
-      BananaLootlineDB.showVendors = this:GetChecked() and true or nil
+  local srcDD = CreateFrame("Frame", "BananaLootlineSourceDD", pane, "UIDropDownMenuTemplate")
+  srcDD:Hide()
+  srcDD.initialize = function()
+    local L = BLL.L
+    local C = BLL.Candidates
+    local f = C:SourceFilter()
+    local head = {}
+    head.text = L["SRC_TITLE"]; head.isTitle = 1; head.notCheckable = 1
+    UIDropDownMenu_AddButton(head)
+    for _, cat in ipairs(C.SOURCE_CATS) do
+      -- "Ohne Fundort" gibt es nur in "Pro Item"; der Wegplan braucht
+      -- immer einen Ort.
+      if cat ~= "NOSOURCE" or pane.listView ~= "lootline" then
+        local info = {}
+        info.text = L["SRC_" .. cat]
+        info.value = cat
+        info.checked = f[cat] and 1 or nil
+        info.keepShownOnClick = 1
+        info.func = function()
+          C:SetSourceCat(this.value, not C:SourceFilter()[this.value])
+          BLL.UI:Refresh()
+        end
+        UIDropDownMenu_AddButton(info)
+      end
     end
-    BLL.UI:Refresh()
+  end
+
+  srcBtn:SetScript("OnClick", function()
+    pcall(ToggleDropDownMenu, 1, nil, srcDD, srcBtn, 0, 0)
   end)
-  vend:SetScript("OnEnter", function()
+  srcBtn:SetScript("OnEnter", function()
     GameTooltip:SetOwner(this, "ANCHOR_LEFT")
-    if this.mode == "sourced" then
-      GameTooltip:SetText(BLL.L["ONLY_SOURCED"])
-      GameTooltip:AddLine(BLL.L["ONLY_SOURCED_TIP"], 0.8, 0.8, 0.8, 1)
-    else
-      GameTooltip:SetText(BLL.L["SHOW_VENDORS"])
-      GameTooltip:AddLine(BLL.L["VENDOR_TOOLTIP"], 0.8, 0.8, 0.8, 1)
-    end
+    GameTooltip:SetText(BLL.L["SRC_TITLE"])
+    GameTooltip:AddLine(BLL.L["SRC_TIP"], 0.8, 0.8, 0.8, 1)
     GameTooltip:Show()
   end)
-  vend:SetScript("OnLeave", function() GameTooltip:Hide() end)
-  pane.vendorCheck = vend
+  srcBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  pane.sourceBtn = srcBtn
 
   ----------------------------------------------------------------
   -- Slotansicht: drei Bereiche untereinander
@@ -1790,17 +1829,14 @@ function UI:ResetList(view)
   pane.listView = view
   pane.list = {}
 
-  -- Der Haendlerhaken gehoert nur zum Wegplan.
-  if pane.vendorCheck then
+  -- Quellen-Dropdown im Wegplan; in "Pro Item" setzt ShowDetail ihn,
+  -- bei den Verzauberungen hat er nichts zu filtern.
+  if pane.sourceBtn then
     if view == "lootline" then
-      pane.vendorCheck.mode = "vendors"
-      pane.vendorCheck.label:SetText(BLL.L["SHOW_VENDORS"])
-      pane.vendorCheck:SetChecked(BananaLootlineDB
-        and BananaLootlineDB.showVendors or false)
-      pane.vendorCheck:Show()
+      pane.sourceBtn:SetText(self:SourceButtonText(true))
+      pane.sourceBtn:Show()
     else
-      pane.vendorCheck:Hide()
-      pane.vendorCheck.label:SetText("")
+      pane.sourceBtn:Hide()
     end
   end
 end
@@ -1997,12 +2033,12 @@ function UI:ShowLootline()
       -- irrefuehrend: die Belohnung ist sicher.
       local chance
       if it.stype == "Q" then
-        chance = "  |cffffd100Quest"
-          .. (it.questLevel and (" " .. it.questLevel) or "") .. "|r"
+        chance = "  |cffffd100"
+          .. (it.questLevel and string.format(BLL.L["QUEST_LEVEL"], it.questLevel)
+              or BLL.L["QUEST"]) .. "|r"
         if it.choiceOf then
           local c = it.choiceBest and "|cffffd100" or "|cff888888"
-          chance = chance .. c .. " (" .. BLL.L["QUEST_CHOICE"] .. " "
-            .. it.choiceOf .. ")|r"
+          chance = chance .. c .. " (" .. string.format(BLL.L["QUEST_ONE_OF"], it.choiceOf) .. ")|r"
         end
       elseif it.chance then
         chance = " |cff888888" .. (BLL:FormatChance(it.chance)
@@ -2170,14 +2206,11 @@ function UI:ShowDetail(slotKey)
     pane.llRows[i]:Hide()
   end
   if pane.scroll then pane.scroll:Hide() end
-  -- In "Pro Item" wird der Haken zu "nur mit Fundort".
-  if pane.vendorCheck then
-    pane.vendorCheck.mode = "sourced"
-    pane.vendorCheck.label:SetText(BLL.L["ONLY_SOURCED"])
-    pane.vendorCheck:SetChecked(not (BananaLootlineDB and BananaLootlineDB.showUnsourced))
-    pane.vendorCheck:Show()
-  end
   pane.listView = nil
+  if pane.sourceBtn then
+    pane.sourceBtn:SetText(self:SourceButtonText(false))
+    pane.sourceBtn:Show()
+  end
   -- Auch die Daten wegraeumen, nicht nur die Zeilen verstecken. Sonst
   -- kann jeder spaetere RenderList-Aufruf die alte Liste wieder
   -- hervorholen.
@@ -2269,11 +2302,8 @@ function UI:ShowDetail(slotKey)
   -- Standard: nur Teile, zu denen eine erreichbare Quelle bekannt ist.
   -- Ohne Haken auch die ohne Fundort (Altlasten der Datenbank, Teile
   -- ausser Reichweite).
-  local accept, scan = nil, nil
-  if not (BananaLootlineDB and BananaLootlineDB.showUnsourced) then
-    accept = function(u) return u.sources and table.getn(u.sources) > 0 end
-    scan = BLL.Candidates.LOOTLINE_SCAN
-  end
+  local accept = BLL.Candidates.SlotViewAccept and BLL.Candidates:SlotViewAccept() or nil
+  local scan = accept and BLL.Candidates.LOOTLINE_SCAN or nil
   local ups = BLL.Candidates:GetUpgrades(slotKey, table.getn(pane.rows), accept, scan)
   local n = table.getn(ups or {})
   if n == 0 then
@@ -2569,46 +2599,11 @@ function UI:Refresh()
 
   self:UpdateSelection()
   self:UpdateViewButtons()
+  self:UpdateAhead()
   self:UpdateStatsPanel()
   self:RefreshModel()
 
   self:RenderDetail()
-end
-
-------------------------------------------------------------------
--- Export-Popup (Grundlage fuer den spaeteren Websync)
-------------------------------------------------------------------
-
-function UI:ShowExport()
-  if not self.exportFrame then
-    local ef = CreateFrame("Frame", "BananaLootlineExport", UIParent)
-    ef:SetWidth(420); ef:SetHeight(120)
-    ef:SetPoint("CENTER", UIParent, "CENTER", 0, 100)
-    ef:SetFrameStrata("FULLSCREEN_DIALOG")
-    ef:EnableMouse(true)
-    StyleFrame(ef)
-
-    local eb = CreateFrame("EditBox", nil, ef)
-    eb:SetWidth(380); eb:SetHeight(30)
-    eb:SetPoint("CENTER", ef, "CENTER", 0, 0)
-    eb:SetFontObject(GameFontHighlightSmall)
-    eb:SetAutoFocus(true)
-    eb:SetScript("OnEscapePressed", function() ef:Hide() end)
-    ef.editbox = eb
-
-    local hint = ef:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    hint:SetPoint("TOP", ef, "TOP", 0, -16)
-    hint:SetText(BLL.locale == "deDE"
-      and "Strg+C zum Kopieren, ESC zum Schliessen"
-      or  "Ctrl+C to copy, ESC to close")
-    hint:SetTextColor(0.6, 0.6, 0.6)
-
-    self.exportFrame = ef
-  end
-
-  self.exportFrame.editbox:SetText(BLL.Gear:ExportString())
-  self.exportFrame.editbox:HighlightText()
-  self.exportFrame:Show()
 end
 
 ------------------------------------------------------------------

@@ -1460,46 +1460,96 @@ end
 Cand.LOOTLINE_SCAN = 40
 
 ------------------------------------------------------------------
+-- Quellenfilter (Dropdown "Quellen" in Lootline und Pro Item)
+--
+-- Vorschlag eines Testers: gezielt nur Dungeon-Beute, nur Quests usw.
+-- Mehrfachauswahl, weil "Dungeon + Quest" der haeufigste Wunsch ist.
+-- Die frueheren Haken "Haendler zeigen" und "Nur mit Fundort" gehen
+-- darin auf: HAENDLER und NOSOURCE sind zwei Eintraege der Liste.
+--
+-- Jede Quelle hat genau eine Kategorie: Questbelohnung ist QUEST,
+-- Haendlerware HAENDLER, alles andere die Kategorie seines Ortes. Wer
+-- QUEST abwaehlt, verliert damit auch die Todesminen-Questbelohnung,
+-- nicht aber die Drops dort.
+------------------------------------------------------------------
+
+Cand.SOURCE_CATS = { "DUNGEON", "RAID", "QUEST", "WELT", "SCHLACHTFELD",
+                     "WELTBOSS", "HAENDLER", "NOSOURCE" }
+Cand.SOURCE_DEFAULT_OFF = { HAENDLER = true, NOSOURCE = true }
+
+function Cand:SourceFilter()
+  local db = BananaLootlineDB
+  if not db then return {} end
+  if not db.sourceFilter then
+    local f = {}
+    for _, c in ipairs(self.SOURCE_CATS) do f[c] = not self.SOURCE_DEFAULT_OFF[c] end
+    -- Alte Haken uebernehmen
+    if db.showVendors then f.HAENDLER = true end
+    if db.showUnsourced then f.NOSOURCE = true end
+    db.sourceFilter = f
+  end
+  return db.sourceFilter
+end
+
+function Cand:SetSourceCat(cat, on)
+  self:SourceFilter()[cat] = on and true or false
+end
+
+function Cand:RowCategory(src)
+  if src.stype == "Q" then return "QUEST" end
+  if src.stype == "V" then return "HAENDLER" end
+  local c = self:Category(src.zone, src.stype)
+  if c == "OBJEKT" or c == "QUEST" or c == "HAENDLER" then return "WELT" end
+  return c
+end
+
+-- Eine Kategorie, die das Menue nicht kennt (eigene /bll cat-Zuordnung
+-- mit unbekanntem Wert), wird nicht weggefiltert.
+function Cand:SourceAllowed(src)
+  local v = self:SourceFilter()[self:RowCategory(src)]
+  if v == nil then return true end
+  return v
+end
+
+-- Filter fuer "Pro Item": nil heisst alles erlaubt.
+function Cand:SlotViewAccept()
+  local f = self:SourceFilter()
+  local all = true
+  for _, c in ipairs(self.SOURCE_CATS) do if not f[c] then all = false end end
+  if all then return nil end
+  return function(u)
+    if not u.sources or table.getn(u.sources) == 0 then return f.NOSOURCE and true or false end
+    for i = 1, table.getn(u.sources) do
+      if Cand:SourceAllowed(u.sources[i]) then return true end
+    end
+    return false
+  end
+end
+
+------------------------------------------------------------------
 -- Die Quelle, ueber die ein Teil im Wegplan steht, oder nil.
 --
--- Der Wegplan gruppiert nach Zone. Hat die beste Quelle keinen Ort,
--- eine schlechtere aber schon, dann ist die schlechtere hier die
--- brauchbare: ein Ziel mit halber Chance schlaegt eines, zu dem
--- niemand hinfindet. In der Einzelansicht bleibt es bei der
--- Reihenfolge nach Chance. Betrifft 301 Gegenstaende.
+-- Die erste Quelle (nach Chance sortiert), die der Quellenfilter
+-- zulaesst, einen Ort hat - oder eine Quest ist, "Quests" ist eine
+-- brauchbare Auskunft - und nicht zu unwahrscheinlich ist. Hat die
+-- beste Quelle keinen Ort, eine schlechtere aber schon, dann ist die
+-- schlechtere hier die brauchbare: ein Ziel mit halber Chance schlaegt
+-- eines, zu dem niemand hinfindet. Haendlerware steht standardmaessig
+-- nicht im Wegplan: sie zaehlt voll, ein Drop nur nach Chance, und
+-- verdraengte sonst jedes Ziel, zu dem man hingehen wuerde.
 ------------------------------------------------------------------
 
 function Cand:LootlineSource(item)
-  if not item.sources or table.getn(item.sources) == 0 then return nil end
-  local best = item.sources[1]
-  if not best.zone then
-    for i = 2, table.getn(item.sources) do
-      if item.sources[i].zone then best = item.sources[i]; break end
+  if not item.sources then return nil end
+  for i = 1, table.getn(item.sources) do
+    local s = item.sources[i]
+    if self:SourceAllowed(s) and (s.zone or s.stype == "Q") then
+      local tooRare = s.stype ~= "Q" and s.stype ~= "V" and s.chance
+                      and s.chance < self:LootlineChanceFloor()
+      if not tooRare then return s end
     end
   end
-  local stype = best.stype
-
-  -- Haendlerware nur auf Wunsch. Sie ist sicher zu bekommen und
-  -- bekommt deshalb den vollen Zuwachs angerechnet, waehrend ein
-  -- Dungeondrop mit seiner Chance multipliziert wird. In einer
-  -- gemeinsamen Liste steht der Haendler damit immer oben und
-  -- verdraengt jedes Ziel, zu dem man tatsaechlich hingehen wuerde.
-  if stype == "V" and not (BananaLootlineDB and BananaLootlineDB.showVendors) then
-    return nil
-  end
-
-  -- Ohne Ort kein Wegplan. Eine Sammelgruppe "kein Fundort"
-  -- beantwortet die Frage "wohin soll ich gehen" nicht und stand
-  -- nur im Weg. Quests bleiben, auch wenn ihr Geber unbekannt ist -
-  -- "Quests" ist eine brauchbare Auskunft.
-  if not best.zone and stype ~= "Q" then return nil end
-
-  -- Zu unwahrscheinlich, um dafuer loszulaufen.
-  if stype ~= "Q" and stype ~= "V" and best.chance
-     and best.chance < self:LootlineChanceFloor() then
-    return nil
-  end
-  return best
+  return nil
 end
 
 function Cand:GetLootline(maxPerSlot)
