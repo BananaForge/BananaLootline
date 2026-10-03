@@ -253,6 +253,7 @@ BLL.Extras = {}
 local X = BLL.Extras
 
 local WIDTH = 270
+local ROWS, ROW_H = 44, 14
 
 function X:Init()
   local main = BananaLootlineFrame
@@ -312,12 +313,42 @@ function X:Init()
   title:SetTextColor(1, 0.82, 0)
   p.title = title
 
-  local body = p:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  body:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -42)
-  body:SetWidth(WIDTH - 28)
-  body:SetJustifyH("LEFT")
-  body:SetJustifyV("TOP")
-  p.body = body
+  -- Zeilen statt eines Textblocks: Kopfzeilen muessen anklickbar sein.
+  -- Passt nicht alles hinein, scrollt das Mausrad.
+  p.rows = {}
+  for i = 1, ROWS do
+    local r = CreateFrame("Button", nil, p)
+    r:SetWidth(WIDTH - 24); r:SetHeight(ROW_H)
+    r:SetPoint("TOPLEFT", p, "TOPLEFT", 12, -40 - (i - 1) * ROW_H)
+    local bg = r:CreateTexture(nil, "BACKGROUND")
+    bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+    bg:SetAllPoints(r)
+    bg:SetVertexColor(0.25, 0.20, 0.06, 0.6)
+    r.bg = bg
+    local sign = r:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    sign:SetPoint("LEFT", r, "LEFT", 2, 0)
+    sign:SetWidth(12)
+    r.sign = sign
+    local t = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    t:SetPoint("LEFT", r, "LEFT", 16, 0)
+    t:SetPoint("RIGHT", r, "RIGHT", -70, 0)
+    t:SetJustifyH("LEFT")
+    r.text = t
+    local rt = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    rt:SetPoint("RIGHT", r, "RIGHT", -2, 0)
+    rt:SetJustifyH("RIGHT")
+    r.right = rt
+    r:SetScript("OnClick", function()
+      if this.key then X:ToggleKey(this.key) end
+    end)
+    r:Hide()
+    p.rows[i] = r
+  end
+  p:EnableMouseWheel(true)
+  p:SetScript("OnMouseWheel", function()
+    X.offset = math.max(0, (X.offset or 0) - (arg1 or 0) * 3)
+    X:Refresh()
+  end)
 
   self.panel = p
   if BananaLootlineDB and BananaLootlineDB.extrasOpen then p:Show() end
@@ -331,63 +362,105 @@ function X:Toggle()
   self:Refresh()
 end
 
--- Text des Menues
-function X:Text()
-  local L = BLL.L
-  local lines = {}
-  local function add(s) table.insert(lines, s) end
-  local MAXLATER, MAXPROF = 3, 5
+------------------------------------------------------------------
+-- Aufklappbare Abschnitte
+--
+-- Jede Stufe beim Klassenlehrer, "jetzt lernbar" und jeder Beruf ist
+-- eine Kopfzeile mit [+]/[-]. Was offen ist, bleibt gespeichert.
+-- Voreinstellung: offen ist, was jetzt lernbar ist; Stufen und Berufe
+-- ohne Lernbares sind zu.
+------------------------------------------------------------------
 
-  add("|cffffd100" .. L["TR_CLASS"] .. "|r")
+function X:IsOpen(key, default)
+  local o = BananaLootlineDB and BananaLootlineDB.extrasKeys
+  if o and o[key] ~= nil then return o[key] end
+  return default
+end
+
+function X:ToggleKey(key)
+  BananaLootlineDB.extrasKeys = BananaLootlineDB.extrasKeys or {}
+  local cur = self.lastOpen and self.lastOpen[key]
+  BananaLootlineDB.extrasKeys[key] = not cur
+  self:Refresh()
+end
+
+-- Liste der Zeilen: { kind = "title"|"head"|"line"|"gap", text, right,
+-- key, open }
+function X:Entries()
+  local L = BLL.L
+  local out = {}
+  self.lastOpen = {}
+  local function add(e) table.insert(out, e) end
+  local function head(key, text, right, default)
+    local open = self:IsOpen(key, default)
+    self.lastOpen[key] = open
+    add({ kind = "head", key = key, text = text, right = right, open = open })
+    return open
+  end
+  local function spell(e, dim)
+    add({ kind = "line", text = (dim and "|cffaaaaaa" or "|cffffffff") .. e.n .. "|r"
+      .. (e.r and (" |cff777777" .. e.r .. "|r") or "") })
+  end
+
+  add({ kind = "title", text = "|cffffd100" .. L["TR_CLASS"] .. "|r" })
   local c = T:ClassStatus()
   if not c then
-    add("|cff888888" .. L["TR_NOVISIT"] .. "|r")
+    add({ kind = "line", text = "|cff888888" .. L["TR_NOVISIT"] .. "|r" })
   else
-    if table.getn(c.now) > 0 then
-      add("|cff44ff44" .. string.format(L["TR_NOW"], table.getn(c.now), BLL:FormatMoney(c.cost)) .. "|r")
-      for _, e in ipairs(c.now) do
-        add("  |cffffffff" .. e.n .. "|r" .. (e.r and (" |cff888888" .. e.r .. "|r") or ""))
+    local n = table.getn(c.now)
+    if n > 0 then
+      if head("c:now", "|cff44ff44" .. string.format(L["TR_NOW"], n, BLL:FormatMoney(c.cost)) .. "|r", nil, true) then
+        for _, e in ipairs(c.now) do spell(e) end
       end
     else
-      add("|cff888888" .. L["TR_NOTHING"] .. "|r")
+      add({ kind = "line", text = "|cff888888" .. L["TR_NOTHING"] .. "|r" })
     end
     local lv = {}
     for l in pairs(c.later) do table.insert(lv, l) end
     table.sort(lv)
-    for i = 1, math.min(MAXLATER, table.getn(lv)) do
-      add(" ")
-      add("|cffffd100" .. string.format(L["TR_LEVEL"], lv[i]) .. "|r")
-      for _, e in ipairs(c.later[lv[i]]) do
-        add("  |cffaaaaaa" .. e.n .. "|r" .. (e.r and (" |cff666666" .. e.r .. "|r") or ""))
+    for _, l in ipairs(lv) do
+      if head("c:" .. l, "|cffffd100" .. string.format(L["TR_LEVEL"], l) .. "|r",
+              "|cff888888" .. table.getn(c.later[l]) .. "|r", false) then
+        for _, e in ipairs(c.later[l]) do spell(e, true) end
       end
     end
-    add(" ")
-    add("|cff888888" .. string.format(L["TR_VISIT"], c.visit.level or 0, c.visit.zone or "?") .. "|r")
+    add({ kind = "line", text = "|cff888888" .. string.format(L["TR_VISIT"], c.visit.level or 0, c.visit.zone or "?") .. "|r" })
   end
 
+  add({ kind = "gap" })
+  add({ kind = "title", text = "|cffffd100" .. L["TR_PROF"] .. "|r" })
   local profs = T:ProfStatus()
-  add(" ")
-  add("|cffffd100" .. L["TR_PROF"] .. "|r")
   if table.getn(profs) == 0 then
-    add("|cff888888" .. L["TR_PROF_NOVISIT"] .. "|r")
+    add({ kind = "line", text = "|cff888888" .. L["TR_PROF_NOVISIT"] .. "|r" })
   end
   for _, p in ipairs(profs) do
-    add(" ")
-    add("|cffffffff" .. p.line .. "|r |cff888888(" .. p.rank .. ")|r")
-    if table.getn(p.now) > 0 then
-      add("  |cff44ff44" .. string.format(L["TR_NOW"], table.getn(p.now), BLL:FormatMoney(p.cost)) .. "|r")
-      for i = 1, math.min(MAXPROF, table.getn(p.now)) do
-        add("    " .. p.now[i].n)
+    local n = table.getn(p.now)
+    local right = (n > 0) and ("|cff44ff44" .. string.format(L["TR_LEARNABLE"], n) .. "|r") or nil
+    if head("p:" .. p.line, "|cffffffff" .. p.line .. "|r |cff888888(" .. p.rank .. ")|r", right, false) then
+      if n > 0 then
+        add({ kind = "line", text = "|cff44ff44" .. string.format(L["TR_NOW"], n, BLL:FormatMoney(p.cost)) .. "|r" })
+        for _, e in ipairs(p.now) do spell(e) end
+      end
+      for _, e in ipairs(p.next) do
+        add({ kind = "line", text = "|cffaaaaaa" .. e.n .. "|r |cff777777"
+          .. (e.s and string.format(L["TR_SKILL"], e.s) or "")
+          .. (e.l and (" " .. string.format(L["TR_LEVEL"], e.l)) or "") .. "|r" })
       end
     end
-    for i = 1, math.min(MAXPROF, table.getn(p.next)) do
-      local e = p.next[i]
-      add("  |cffaaaaaa" .. e.n .. "|r |cff666666"
-        .. (e.s and string.format(L["TR_SKILL"], e.s) or "")
-        .. (e.l and (" " .. string.format(L["TR_LEVEL"], e.l)) or "") .. "|r")
+  end
+  return out
+end
+
+-- Reiner Text, fuer Tests und Chatausgabe
+function X:Text()
+  local t = {}
+  for _, e in ipairs(self:Entries()) do
+    if e.kind ~= "gap" then
+      table.insert(t, (e.kind == "head" and (e.open and "[-] " or "[+] ") or "") .. (e.text or "")
+        .. (e.right and ("  " .. e.right) or ""))
     end
   end
-  return table.concat(lines, "\n")
+  return table.concat(t, "\n")
 end
 
 function X:Refresh()
@@ -397,7 +470,32 @@ function X:Refresh()
   self.tab.arrow:SetText(open and "<" or ">")
   self.tab.count:SetText(n > 0 and ("|cff44ff44" .. n .. "|r") or "")
   if open then
-    self.panel.title:SetText(BLL.L["EX_TITLE"])
-    self.panel.body:SetText(self:Text())
+    local p = self.panel
+    p.title:SetText(BLL.L["EX_TITLE"])
+    local list = self:Entries()
+    local maxOff = math.max(0, table.getn(list) - ROWS)
+    if (self.offset or 0) > maxOff then self.offset = maxOff end
+    local off = self.offset or 0
+    for i = 1, ROWS do
+      local r, e = p.rows[i], list[i + off]
+      if e then
+        r.key = (e.kind == "head") and e.key or nil
+        r.text:SetText(e.text or "")
+        r.right:SetText(e.right or "")
+        if e.kind == "head" then
+          r.sign:SetText(e.open and "|cffffd100-|r" or "|cffffd100+|r")
+          r.bg:Show()
+          r.text:SetPoint("LEFT", r, "LEFT", 16, 0)
+        else
+          r.sign:SetText("")
+          r.bg:Hide()
+          r.text:SetPoint("LEFT", r, "LEFT", (e.kind == "line") and 16 or 2, 0)
+        end
+        r:Show()
+      else
+        r.key = nil
+        r:Hide()
+      end
+    end
   end
 end
