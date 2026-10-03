@@ -301,42 +301,67 @@ function Weights:Get()
     self.activeSpec = nil
   end
 
-  -- Eigene Gewichte (/bll weight) haben Vorrang vor Klasse und Spec.
-  self.customWeights = (BananaLootlineDB and BananaLootlineDB.weights) and true or nil
-  if self.customWeights then
-    return BananaLootlineDB.weights
-  end
+  -- Eigene Gewichte (/bll weight, Menue "Statgewichte") haben Vorrang
+  -- vor Klasse und Spec. Sie gelten pro Charakter.
+  local own = self:Custom()
+  self.customWeights = own and true or nil
+  if own then return own end
+  return self:BaseFor(class, tab)
+end
 
+-- Gewichte einer Klasse und Spec ohne eigene Aenderungen. tab nil heisst
+-- reine Klassenwerte.
+function Weights:BaseFor(class, tab)
   local base = self.DEFAULTS[class or ""] or self.DEFAULTS["WARRIOR"]
-
+  local specs = self.SPECS[class or ""]
   local out = {}
   for k, v in pairs(base) do out[k] = v end
-
-  -- Spezialisierung ueberschreibt einzelne Werte. Die eigene Wahl
-  -- schlaegt die Erkennung.
   if tab and specs and specs[tab] then
     for k, v in pairs(specs[tab]) do
       if k ~= "name" then out[k] = v end
     end
   end
-
   for k, v in pairs(COMMON) do
     if not out[k] then out[k] = v end
   end
   return out
 end
 
+-- Eigene Gewichte des Charakters. Bis 0.23.4 lagen sie fuer den ganzen
+-- Account in BananaLootlineDB.weights; der erste Charakter, der sie
+-- liest, uebernimmt sie.
+function Weights:Custom()
+  BananaLootlineChar = BananaLootlineChar or {}
+  if BananaLootlineDB and BananaLootlineDB.weights and not BananaLootlineChar.weights then
+    BananaLootlineChar.weights = BananaLootlineDB.weights
+    BananaLootlineDB.weights = nil
+  end
+  return BananaLootlineChar.weights
+end
+
+-- Alle Gewichte auf einmal setzen (Menue), nil hebt sie auf.
+function Weights:SetAll(t)
+  BananaLootlineChar = BananaLootlineChar or {}
+  if not t then BananaLootlineChar.weights = nil return end
+  local copy = {}
+  for k, v in pairs(t) do if v and v ~= 0 then copy[k] = v end end
+  BananaLootlineChar.weights = copy
+end
+
 function Weights:Set(stat, value)
-  BananaLootlineDB.weights = BananaLootlineDB.weights or self:Get()
+  BananaLootlineChar = BananaLootlineChar or {}
+  BananaLootlineChar.weights = self:Custom() or self:Get()
   if value == nil or value == 0 then
-    BananaLootlineDB.weights[stat] = nil
+    BananaLootlineChar.weights[stat] = nil
   else
-    BananaLootlineDB.weights[stat] = value
+    BananaLootlineChar.weights[stat] = value
   end
 end
 
 function Weights:Reset()
-  BananaLootlineDB.weights = nil
+  BananaLootlineChar = BananaLootlineChar or {}
+  BananaLootlineChar.weights = nil
+  if BananaLootlineDB then BananaLootlineDB.weights = nil end
 end
 
 ------------------------------------------------------------------

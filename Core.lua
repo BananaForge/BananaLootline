@@ -17,7 +17,7 @@ local L = BLL.L
 -- wird die Version in der TOC; BLL:Version() liest sie von dort.
 -- Bis 0.22.5 stand hier eine zweite, von Hand gepflegte Nummer, und
 -- sie lief auseinander: die TOC sagte 0.22.5, der Selbsttest 0.21.1.
-BLL.VERSION_FALLBACK = "0.23.4"
+BLL.VERSION_FALLBACK = "0.24.0"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -125,6 +125,7 @@ frame:SetScript("OnEvent", function()
     BLL.UI:Init()
     if BLL.Minimap then BLL.Minimap:Init() end
     if BLL.Extras then BLL.Extras:Init() end
+    if BLL.WeightsUI then BLL.WeightsUI:Init() end
 
     -- Nachscans. Beim Betreten der Welt kennt der Client die Daten der
     -- angelegten Items oft noch nicht - der Tooltip ist dann leer und
@@ -555,6 +556,7 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
         end
       end
     end
+    if BLL.WeightsUI then BLL.WeightsUI.work = nil; BLL.WeightsUI:Refresh() end
 
   elseif command == "set" then
     local id = tonumber(param)

@@ -67,13 +67,13 @@ check(W.activeSpec == "Discipline", "englischer Anzeigename")
 
 -- 7b. Eigene Gewichte: die Spec wird trotzdem erkannt und angezeigt
 BLL.locale = "deDE"
-BananaLootlineDB.weights = { AGI = 1 }
+BananaLootlineChar.weights = { AGI = 1 }
 W:SetSpec(3)
 local cw = W:Get()
 check(cw.AGI == 1 and cw.SPELLPOWER_SHADOW == nil, "eigene Gewichte gelten")
 check(W.activeSpec == "Schatten", "Spec bleibt sichtbar, ist " .. tostring(W.activeSpec))
 check(W.customWeights, "eigene Gewichte sind markiert")
-BananaLootlineDB.weights = nil
+BananaLootlineChar.weights = nil
 W:Get()
 check(not W.customWeights, "ohne eigene Gewichte keine Markierung")
 
