@@ -119,6 +119,17 @@ BLL.Extras:ToggleKey("p:Leatherworking")
 list = BLL.Extras:Entries()
 check(find(list, "Guardian Pants"), "nach Klick sind die Rezepte sichtbar")
 check(BananaLootlineDB.extrasKeys["c:20"] == true, "Zustand gespeichert")
+-- Nur die naechsten fuenf Lehrerstufen
+isProf = false
+BLL.player.level = 17
+services = {}
+for l = 18, 40, 2 do table.insert(services, { "Spell " .. l, "", "unavailable", l, 100 }) end
+T:Scan()
+local heads = 0
+for _, e in ipairs(BLL.Extras:Entries()) do
+  if e.kind == "head" and string.find(e.text, "Stufe", 1, true) then heads = heads + 1 end
+end
+check(heads == 5, "fuenf Stufen-Kopfzeilen, sind " .. heads)
 BLL.Extras:ToggleKey("c:20")
 check(not find(BLL.Extras:Entries(), "Aspect of the Cheetah"), "zweiter Klick klappt wieder zu")
 print(ok and "ALLE TESTS OK" or "TESTS FEHLGESCHLAGEN")
