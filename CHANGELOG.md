@@ -2,6 +2,16 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.24.0
+
+- **Seitenmenü „Statgewichte" links am Hauptfenster.** Eine Lasche mit Pfeil im linken Zwischenrand neben den Slots klappt es auf. Alle Gewichte lassen sich direkt bearbeiten, gruppiert nach Attribute, Physisch, Zauber, Verteidigung und Widerstände; das Mausrad scrollt.
+  - Die Werte sind die internen Gewichte des Addons, ohne Umrechnung.
+  - Werte, die von der Spec abweichen, sind orange, der Spec-Wert steht in Klammern daneben.
+  - „Vorlage" lädt die Werte eines anderen Talentbaums der Klasse in die Felder; gespeichert wird erst mit „Übernehmen". „Spec-Werte" setzt zurück.
+  - Sind die Werte gleich der Spec, wird nichts gespeichert, die Spec-Gewichte gelten weiter.
+- **Eigene Gewichte gelten jetzt pro Charakter** (auch `/bll weight`). Bisher lagen sie für den ganzen Account; vorhandene eigene Gewichte übernimmt der erste Charakter, der eingeloggt wird.
+- `tools/test_weightsui.lua` prüft Speichern, Vorlagen, Zurücksetzen und die Übernahme alter Gewichte.
+
 ## 0.23.4
 
 - **Tooltips im Extras-Menü.** Mit der Maus über einem Zauber oder Rezept erscheint, was er macht: Name und Rang, nötige Stufe bzw. Fertigkeit, Preis und die Beschreibung des Lehrers. Die Beschreibung liest das Addon beim Lehrerbesuch mit — dieselbe, die das Lehrerfenster unten zeigt; bei Rezepten ohne eigene Beschreibung den Tooltip des Eintrags. Für Listen von früheren Besuchen fehlt sie, bis man den Lehrer erneut öffnet; der Tooltip sagt das.

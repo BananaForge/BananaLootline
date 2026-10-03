@@ -102,7 +102,7 @@ local STAT_SHORT = {
     RES_FIRE = "Feuerwid.", RES_FROST = "Frostwid.", RES_NATURE = "Naturwid.",
     RES_SHADOW = "Schattenwid.", RES_ARCANE = "Arkanwid.", RES_ALL = "alle Widerstaende",
     WEAPON_MIN = "Min.-Schaden", WEAPON_MAX = "Max.-Schaden",
-    WEAPON_SPEED = "Tempo", WEAPON_DPS = "DPS",
+    WEAPON_SPEED = "Tempo", WEAPON_DPS = "DPS", MELEE_DPS = "Nahkampf-DPS",
   },
   enUS = {
     STR = "Str", AGI = "Agi", STA = "Sta", INT = "Int", SPI = "Spi",
@@ -117,7 +117,7 @@ local STAT_SHORT = {
     RES_FIRE = "Fire Res", RES_FROST = "Frost Res", RES_NATURE = "Nature Res",
     RES_SHADOW = "Shadow Res", RES_ARCANE = "Arcane Res", RES_ALL = "all resistances",
     WEAPON_MIN = "Min Dmg", WEAPON_MAX = "Max Dmg",
-    WEAPON_SPEED = "Speed", WEAPON_DPS = "DPS",
+    WEAPON_SPEED = "Speed", WEAPON_DPS = "DPS", MELEE_DPS = "Melee DPS",
   },
 }
 
@@ -125,6 +125,7 @@ local function StatLabel(k)
   local labels = STAT_SHORT[BLL.locale] or STAT_SHORT.enUS
   return labels[k] or k
 end
+UI.StatLabel = StatLabel
 
 -- Teile nebeneinander setzen, hoechstens maxLines Zeilen. Was nicht
 -- passt, faellt weg und wird durch "..." angedeutet. Umbrochen wird nur
@@ -617,6 +618,7 @@ function UI:ChooseSpec(tab)
     BLL:Print(BLL.L["SPEC_AUTO"])
   end
   if BLL.Weights.customWeights then BLL:Print(BLL.L["CUSTOM_WEIGHTS_NOTE"]) end
+  if BLL.WeightsUI then BLL.WeightsUI.work = nil; BLL.WeightsUI:Refresh() end
   if BLL.Candidates and BLL.Candidates.Run then
     BLL.Candidates:Run()
   else
@@ -931,6 +933,7 @@ function UI:BuildSlotList()
   -- Waffenreihe ist 394 hoch, also 75 Pixel Abstand oben und unten.
   doll:SetHeight(394)
   doll:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -197)
+  self.doll = doll
 
   self.slotButtons = {}
 
