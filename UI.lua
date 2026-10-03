@@ -1364,7 +1364,10 @@ function UI:BuildDetailPane()
 
   local header = pane:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   header:SetPoint("TOPLEFT", pane, "TOPLEFT", 12, -12)
-  header:SetWidth(360)
+  -- Rechts daneben sitzt der Quellen-Knopf (150 breit). Laengere
+  -- Meldungen ("Noch kein Weg ...") brechen deshalb vor ihm um, statt
+  -- unter ihm durchzulaufen.
+  header:SetWidth(220)
   header:SetJustifyH("LEFT")
   SetFontSize(header, 17, "OUTLINE")
   pane.header = header

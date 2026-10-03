@@ -259,21 +259,31 @@ function X:Init()
   if self.panel or not main then return end
   local L = BLL.L
 
+  -- Die Lasche sitzt genau im Zwischenrand zwischen rechter Liste und
+  -- Fensterkante, senkrecht mittig zur Liste. Der Pfeil steht mittig
+  -- in der Lasche, die Zahl lernbarer Eintraege darueber.
+  local pane = BLL.UI and BLL.UI.detail
   local tab = CreateFrame("Button", "BananaLootlineExtrasTab", main)
-  tab:SetWidth(22); tab:SetHeight(64)
-  tab:SetPoint("LEFT", main, "RIGHT", -4, 40)
+  tab:SetWidth(12); tab:SetHeight(56)
+  if pane then
+    tab:SetPoint("LEFT", pane, "RIGHT", 1, 0)
+  else
+    tab:SetPoint("RIGHT", main, "RIGHT", -3, 0)
+  end
   tab:SetBackdrop({
     bgFile = "Interface\\Buttons\\WHITE8X8",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = false, edgeSize = 8,
-    insets = { left = 2, right = 2, top = 2, bottom = 2 },
+    edgeFile = "Interface\\Buttons\\WHITE8X8",
+    tile = false, edgeSize = 1,
+    insets = { left = 1, right = 1, top = 1, bottom = 1 },
   })
   tab:SetBackdropColor(0.45, 0.05, 0.05, 1)
-  local arrow = tab:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-  arrow:SetPoint("CENTER", tab, "CENTER", 1, 6)
+  tab:SetBackdropBorderColor(0.78, 0.63, 0.24, 1)
+  tab:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+  local arrow = tab:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  arrow:SetPoint("CENTER", tab, "CENTER", 1, 0)
   tab.arrow = arrow
   local count = tab:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  count:SetPoint("CENTER", tab, "CENTER", 0, -14)
+  count:SetPoint("BOTTOM", tab, "TOP", 0, 2)
   tab.count = count
   tab:SetScript("OnClick", function() X:Toggle() end)
   tab:SetScript("OnEnter", function()
@@ -287,7 +297,7 @@ function X:Init()
 
   local p = CreateFrame("Frame", "BananaLootlineExtras", main)
   p:SetWidth(WIDTH); p:SetHeight(main:GetHeight() - 40)
-  p:SetPoint("TOPLEFT", main, "TOPRIGHT", 14, -20)
+  p:SetPoint("TOPLEFT", main, "TOPRIGHT", 2, -20)
   p:SetBackdrop({
     bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
     edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",

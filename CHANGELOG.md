@@ -2,6 +2,11 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.23.1
+
+- **Die Lasche zum Seitenmenü sitzt im Zwischenrand** zwischen rechter Liste und Fensterkante, senkrecht mittig zur Liste; der Pfeil steht mittig in der Lasche, die Zahl lernbarer Einträge darüber. Das Seitenmenü schliesst direkt an die Fensterkante an.
+- **Lange Meldungen in der Kopfzeile laufen nicht mehr unter den Quellen-Knopf.** „Noch kein Weg. Unten auf …" bricht jetzt vor dem Knopf um.
+
 ## 0.23.0
 
 - **Neu: Seitenmenü „Extras" mit Erinnerung an Klassen- und Berufslehrer.** Am rechten Rand des Fensters sitzt eine Lasche mit Pfeil; ein Klick klappt daneben das Menü auf. Die Zahl auf der Lasche sagt, wie viel gerade lernbar ist.
