@@ -2607,6 +2607,7 @@ function UI:Refresh()
   self:UpdateSelection()
   self:UpdateViewButtons()
   self:UpdateAhead()
+  if BLL.Extras then BLL.Extras:Refresh() end
   self:UpdateStatsPanel()
   self:RefreshModel()
 
