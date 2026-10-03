@@ -2,6 +2,18 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.18
+
+- **Neu: Quellen-Dropdown oben rechts in Lootline und „Pro Item".** Vorschlag eines Testers. Mehrfachauswahl aus Dungeon, Raid, Quest, Welt, Schlachtfeld, Weltboss, Händler und — nur in „Pro Item" — Ohne Fundort. Das Menü bleibt beim Klicken offen, jeder Haken zeichnet die Liste sofort neu; die Auswahl gilt für beide Ansichten und bleibt gespeichert. Der Knopf zeigt den Stand: „Quellen: Alle", „Quellen: Dungeon, Quest", „Quellen: 3 von 6", dazu „+Händler" bzw. „+Ohne Fundort".
+  - Jede Quelle zählt genau zu einer Kategorie: eine Questbelohnung ist Quest, auch wenn die Quest in den Todesminen spielt; Händlerware ist Händler; alles andere zählt nach seinem Ort. Wer Quest abwählt, verliert die Todesminen-Questbelohnung, nicht die Drops dort.
+  - Ein Teil bleibt sichtbar, solange eine seiner Quellen erlaubt ist. Im Wegplan steht es dann unter dieser Quelle.
+  - Voreinstellung wie bisher: alles außer Händler und Ohne Fundort. Die Haken „Händler zeigen" und „Nur mit Fundort" gehen im Dropdown auf; wer sie gesetzt hatte, findet die Einstellung übernommen.
+  - Neu ist, dass Händlerware ohne Haken auch in „Pro Item" fehlt; bisher erschien sie dort immer.
+- **Questzeile: „Questlevel 15" statt „Quest 15", „(1 von 2)" statt „(Wahl aus 2)".** Die Zahl ist wie bisher die Stufe, ab der man die Quest annehmen kann.
+- **Unten neben − / + steht jetzt klein, was die Pfeile tun:** „Levelrange erhöhen" und darunter „jetzt: bis Stufe 16" (eigene Stufe plus eingestellter Wert). Das Wort „Voraus" entfällt.
+- **Export-Knopf und Export-Funktion entfernt.** Der Exportstring war für einen Websync gedacht, den es nicht gibt.
+- `tools/test_lootline.lua` prüft den Quellenfilter: Kategorien je Quelle, Filter Dungeon und Quest, „Pro Item" mit und ohne Fundort, Übernahme der alten Haken.
+
 ## 0.22.17
 
 Aus der zweiten Runde eines Testers (Schurke 60, noch mit 0.22.11).
