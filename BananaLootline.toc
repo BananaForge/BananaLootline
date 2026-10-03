@@ -2,7 +2,7 @@
 ## Title: |cffffcc33Banana|cffffffffLootline
 ## Notes: Ingame Gear- und Lootline-Planer fuer OctoWoW (Mysteries of Azeroth)
 ## Author: BananaForge
-## Version: 0.23.2
+## Version: 0.23.3
 ## OptionalDeps: pfQuest, pfQuest-octo, pfQuest-turtle, BananaRepublik_Partnerguild, AtlasLoot
 ## SavedVariables: BananaLootlineDB, OctoLootlineDB
 ## SavedVariablesPerCharacter: BananaLootlineChar, OctoLootlineChar

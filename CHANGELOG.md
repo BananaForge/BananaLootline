@@ -2,6 +2,10 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.23.3
+
+- **Extras: beim Klassenlehrer nur die nächsten fünf Lehrerstufen.** 0.23.2 zeigte alle Stufen bis 60, bei Stufe 17 waren das 22 Kopfzeilen. Jetzt sind es höchstens fünf, bei Stufe 17 also Level 18 bis 26. Berufe sind unverändert.
+
 ## 0.23.2
 
 - **Seitenmenü „Extras": alles aufklappbar.** Beim Klassenlehrer ist „Jetzt lernbar" und jede einzelne Stufe eine Kopfzeile mit [+]/[−], rechts die Zahl der Zauber; bei den Berufslehrern jeder Beruf, rechts grün „N lernbar", falls es etwas zu lernen gibt. Ein Klick auf die Zeile klappt auf oder zu, der Zustand bleibt gespeichert.

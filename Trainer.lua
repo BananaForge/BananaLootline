@@ -254,6 +254,7 @@ local X = BLL.Extras
 
 local WIDTH = 270
 local ROWS, ROW_H = 44, 14
+X.MAX_LEVELS = 5
 
 function X:Init()
   local main = BananaLootlineFrame
@@ -418,7 +419,9 @@ function X:Entries()
     local lv = {}
     for l in pairs(c.later) do table.insert(lv, l) end
     table.sort(lv)
-    for _, l in ipairs(lv) do
+    -- Nur die naechsten Lehrerstufen; alle bis 60 waren zu viel.
+    for i = 1, math.min(X.MAX_LEVELS, table.getn(lv)) do
+      local l = lv[i]
       if head("c:" .. l, "|cffffd100" .. string.format(L["TR_LEVEL"], l) .. "|r",
               "|cff888888" .. table.getn(c.later[l]) .. "|r", false) then
         for _, e in ipairs(c.later[l]) do spell(e, true) end
