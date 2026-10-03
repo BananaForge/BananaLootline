@@ -2,6 +2,13 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.23.2
+
+- **Seitenmenü „Extras": alles aufklappbar.** Beim Klassenlehrer ist „Jetzt lernbar" und jede einzelne Stufe eine Kopfzeile mit [+]/[−], rechts die Zahl der Zauber; bei den Berufslehrern jeder Beruf, rechts grün „N lernbar", falls es etwas zu lernen gibt. Ein Klick auf die Zeile klappt auf oder zu, der Zustand bleibt gespeichert.
+  - Voreinstellung: „Jetzt lernbar" ist offen, Stufen und Berufe sind zu.
+  - Weil zugeklappte Abschnitte kaum Platz brauchen, zeigt das Menü jetzt alle kommenden Stufen statt nur drei und alle kommenden Rezepte statt nur fünf. Reicht der Platz trotzdem nicht, scrollt das Mausrad.
+- `tools/test_trainer.lua` prüft Auf- und Zuklappen.
+
 ## 0.23.1
 
 - **Die Lasche zum Seitenmenü sitzt im Zwischenrand** zwischen rechter Liste und Fensterkante, senkrecht mittig zur Liste; der Pfeil steht mittig in der Lasche, die Zahl lernbarer Einträge darüber. Das Seitenmenü schliesst direkt an die Fensterkante an.
