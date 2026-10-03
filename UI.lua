@@ -1433,6 +1433,10 @@ function UI:BuildDetailPane()
   sv:SetAllPoints(pane)
   sv:Hide()
   pane.slotView = sv
+  -- Der Quellen-Knopf entstand vorher und laege sonst unter dieser Ebene.
+  if pane.sourceBtn and sv:GetFrameLevel() then
+    pane.sourceBtn:SetFrameLevel(sv:GetFrameLevel() + 10)
+  end
 
   local function SectionBar(y)
     local bar = CreateFrame("Frame", nil, sv)
@@ -1483,13 +1487,16 @@ function UI:BuildDetailPane()
     btn.hl = hl
   end
 
-  -- Bereich 1: angelegtes Teil
-  sv.secCur = SectionBar(-10)
+  -- Bereich 1: angelegtes Teil. Alles beginnt 26 Pixel tiefer als
+  -- frueher: darueber sitzt rechts der Quellen-Knopf, den die Zeile
+  -- "Angelegt" sonst verdeckte.
+  local TOP = -26
+  sv.secCur = SectionBar(TOP - 10)
   sv.secCur.text:SetText(BLL.locale == "deDE" and "Angelegt" or "Equipped")
 
   local cur = CreateFrame("Button", nil, sv)
   cur:SetWidth(366); cur:SetHeight(56)
-  cur:SetPoint("TOPLEFT", sv, "TOPLEFT", 10, -36)
+  cur:SetPoint("TOPLEFT", sv, "TOPLEFT", 10, TOP - 36)
   Highlight(cur)
   cur.icon, cur.border = QualityIcon(cur, 40)
   cur.icon:SetPoint("TOPLEFT", cur, "TOPLEFT", 4, -6)
@@ -1514,18 +1521,18 @@ function UI:BuildDetailPane()
   sv.cur = cur
 
   -- Bereich 2: Upgrades
-  sv.secUp = SectionBar(-102)
+  sv.secUp = SectionBar(TOP - 102)
   sv.secUp.text:SetText("Upgrades")
 
   local status = sv:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  status:SetPoint("TOPLEFT", sv, "TOPLEFT", 18, -134)
+  status:SetPoint("TOPLEFT", sv, "TOPLEFT", 18, TOP - 134)
   status:SetWidth(350)
   status:SetJustifyH("LEFT")
   SetFontSize(status, 13)
   sv.status = status
 
   local UPGRADE_ROWS = 6
-  local UP_TOP, UP_STEP = -130, 64
+  local UP_TOP, UP_STEP = TOP - 130, 64
   pane.rows = {}
   for i = 1, UPGRADE_ROWS do
     local row = CreateFrame("Button", nil, sv)

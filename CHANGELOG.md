@@ -2,6 +2,10 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.22.19
+
+- **„Pro Item": der Quellen-Knopf liegt nicht mehr unter der Zeile „Angelegt".** Die Ansicht beginnt 26 Pixel tiefer, der Knopf sitzt darüber und eine Ebene höher.
+
 ## 0.22.18
 
 - **Neu: Quellen-Dropdown oben rechts in Lootline und „Pro Item".** Vorschlag eines Testers. Mehrfachauswahl aus Dungeon, Raid, Quest, Welt, Schlachtfeld, Weltboss, Händler und — nur in „Pro Item" — Ohne Fundort. Das Menü bleibt beim Klicken offen, jeder Haken zeichnet die Liste sofort neu; die Auswahl gilt für beide Ansichten und bleibt gespeichert. Der Knopf zeigt den Stand: „Quellen: Alle", „Quellen: Dungeon, Quest", „Quellen: 3 von 6", dazu „+Händler" bzw. „+Ohne Fundort".
