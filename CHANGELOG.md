@@ -2,6 +2,10 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.23.4
+
+- **Tooltips im Extras-Menü.** Mit der Maus über einem Zauber oder Rezept erscheint, was er macht: Name und Rang, nötige Stufe bzw. Fertigkeit, Preis und die Beschreibung des Lehrers. Die Beschreibung liest das Addon beim Lehrerbesuch mit — dieselbe, die das Lehrerfenster unten zeigt; bei Rezepten ohne eigene Beschreibung den Tooltip des Eintrags. Für Listen von früheren Besuchen fehlt sie, bis man den Lehrer erneut öffnet; der Tooltip sagt das.
+
 ## 0.23.3
 
 - **Extras: beim Klassenlehrer nur die nächsten fünf Lehrerstufen.** 0.23.2 zeigte alle Stufen bis 60, bei Stufe 17 waren das 22 Kopfzeilen. Jetzt sind es höchstens fünf, bei Stufe 17 also Level 18 bis 26. Berufe sind unverändert.

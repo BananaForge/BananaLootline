@@ -34,6 +34,7 @@ GetTrainerServiceSkillReq = function(i) local s = visible(i); return s[6], s[7] 
 GetTrainerServiceTypeFilter = function(t) return filterUnavail == 1 end
 SetTrainerServiceTypeFilter = function(t, v) filterUnavail = v end
 IsTradeskillTrainer = function() return isProf end
+GetTrainerServiceDescription = function(i) local s = visible(i); return s[1] == "Multi-Shot" and "Fires several missiles, hitting 3 targets." or nil end
 local skills = { { "Leatherworking", false, nil, 90 } }
 GetNumSkillLines = function() return table.getn(skills) end
 GetSkillLineInfo = function(i) local s = skills[i]; return s[1], s[2], s[3], s[4] end
@@ -64,6 +65,18 @@ check(filterUnavail == 0, "Filter wird wiederhergestellt")
 local c = T:ClassStatus()
 check(c and table.getn(c.now) == 1 and c.now[1].n == "Arcane Shot", "jetzt lernbar: Arcane Shot")
 check(c.later[18] and table.getn(c.later[18]) == 2, "Stufe 18 bringt zwei Zauber")
+-- Tooltip: Beschreibung vom Lehrer, Stufe, Preis
+local ms
+for _, e in ipairs(c.later[18]) do if e.n == "Multi-Shot" then ms = e end end
+check(ms and ms.d == "Fires several missiles, hitting 3 targets.", "Beschreibung gespeichert")
+local tl = BLL.Extras:TipLines(ms)
+check(tl[1][1] == "Multi-Shot (Rang 1)", "Tooltip-Titel mit Rang")
+local joined = ""
+for _, l in ipairs(tl) do joined = joined .. l[1] .. "|" end
+check(string.find(joined, "Stufe 18", 1, true) and string.find(joined, "20s", 1, true)
+  and string.find(joined, "Fires several", 1, true), "Tooltip mit Stufe, Preis und Beschreibung")
+local tl2 = BLL.Extras:TipLines({ n = "Old", l = 20 })
+check(string.find(tl2[table.getn(tl2)][1], "Lehrerbesuch", 1, true), "ohne Beschreibung: Hinweis auf naechsten Besuch")
 check(T:LearnableCount() == 1, "Zaehler 1")
 
 -- 3. Aufstieg auf 18: Meldung mit Anzahl und Preis

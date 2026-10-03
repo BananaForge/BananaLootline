@@ -53,6 +53,42 @@ function T:SkillRank(name)
 end
 
 ------------------------------------------------------------------
+-- Beschreibung eines Eintrags im Lehrerfenster
+--
+-- Erst GetTrainerServiceDescription (dasselbe, was das Lehrerfenster
+-- unten anzeigt). Liefert das nichts - bei Rezepten oft -, wird der
+-- Tooltip des Eintrags gelesen, ohne Titelzeile.
+------------------------------------------------------------------
+
+local scanTip
+local function ScanTip()
+  if scanTip or not CreateFrame then return scanTip end
+  scanTip = CreateFrame("GameTooltip", "BananaLootlineTrainerScan", UIParent, "GameTooltipTemplate")
+  return scanTip
+end
+
+function T:Describe(i)
+  if GetTrainerServiceDescription then
+    local ok, d = pcall(GetTrainerServiceDescription, i)
+    if ok and d and d ~= "" then return d end
+  end
+  local tip = ScanTip()
+  if not (tip and tip.SetTrainerService and tip.NumLines) then return nil end
+  tip:SetOwner(WorldFrame or UIParent, "ANCHOR_NONE")
+  tip:ClearLines()
+  if not pcall(tip.SetTrainerService, tip, i) then return nil end
+  local lines = {}
+  for k = 2, tip:NumLines() do
+    local fs = getglobal("BananaLootlineTrainerScanTextLeft" .. k)
+    local t = fs and fs:GetText()
+    if t and t ~= "" then table.insert(lines, t) end
+  end
+  tip:Hide()
+  if table.getn(lines) == 0 then return nil end
+  return table.concat(lines, "\n")
+end
+
+------------------------------------------------------------------
 -- Lehrerfenster lesen
 ------------------------------------------------------------------
 
@@ -78,6 +114,7 @@ function T:Scan()
         if lvl and lvl > 0 then e.l = lvl end
       end
       if GetTrainerServiceCost then e.c = GetTrainerServiceCost(i) end
+      e.d = T:Describe(i)
       if isProf and GetTrainerServiceSkillReq then
         local sname, srank = GetTrainerServiceSkillReq(i)
         if sname and sname ~= "" then skillLine = skillLine or sname end
@@ -342,6 +379,10 @@ function X:Init()
     r:SetScript("OnClick", function()
       if this.key then X:ToggleKey(this.key) end
     end)
+    r:SetScript("OnEnter", function()
+      if this.spell then X:ShowTip(this, this.spell) end
+    end)
+    r:SetScript("OnLeave", function() GameTooltip:Hide() end)
     r:Hide()
     p.rows[i] = r
   end
@@ -399,7 +440,7 @@ function X:Entries()
     return open
   end
   local function spell(e, dim)
-    add({ kind = "line", text = (dim and "|cffaaaaaa" or "|cffffffff") .. e.n .. "|r"
+    add({ kind = "line", spell = e, text = (dim and "|cffaaaaaa" or "|cffffffff") .. e.n .. "|r"
       .. (e.r and (" |cff777777" .. e.r .. "|r") or "") })
   end
 
@@ -445,7 +486,7 @@ function X:Entries()
         for _, e in ipairs(p.now) do spell(e) end
       end
       for _, e in ipairs(p.next) do
-        add({ kind = "line", text = "|cffaaaaaa" .. e.n .. "|r |cff777777"
+        add({ kind = "line", spell = e, text = "|cffaaaaaa" .. e.n .. "|r |cff777777"
           .. (e.s and string.format(L["TR_SKILL"], e.s) or "")
           .. (e.l and (" " .. string.format(L["TR_LEVEL"], e.l)) or "") .. "|r" })
       end
@@ -466,6 +507,34 @@ function X:Text()
   return table.concat(t, "\n")
 end
 
+-- Tooltip eines Zaubers oder Rezepts: Name, Rang, Bedingung, Preis,
+-- Beschreibung. Die Beschreibung stammt vom letzten Lehrerbesuch.
+function X:TipLines(e)
+  local L = BLL.L
+  local out = {}
+  table.insert(out, { e.n .. (e.r and (" (" .. e.r .. ")") or ""), 1, 1, 1 })
+  if e.l then table.insert(out, { string.format(L["TR_TIP_LEVEL"], e.l), 0.8, 0.8, 0.8 }) end
+  if e.s then table.insert(out, { string.format(L["TR_TIP_SKILL"], e.s), 0.8, 0.8, 0.8 }) end
+  if e.c and e.c > 0 then table.insert(out, { string.format(L["TR_TIP_COST"], BLL:FormatMoney(e.c)), 0.8, 0.8, 0.8 }) end
+  if e.d then
+    table.insert(out, { e.d, 1, 0.82, 0, true })
+  else
+    table.insert(out, { L["TR_TIP_NODESC"], 0.5, 0.5, 0.5, true })
+  end
+  return out
+end
+
+function X:ShowTip(owner, e)
+  GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+  local lines = self:TipLines(e)
+  GameTooltip:SetText(lines[1][1], lines[1][2], lines[1][3], lines[1][4])
+  for i = 2, table.getn(lines) do
+    local l = lines[i]
+    GameTooltip:AddLine(l[1], l[2], l[3], l[4], l[5] and 1 or nil)
+  end
+  GameTooltip:Show()
+end
+
 function X:Refresh()
   if not self.tab then return end
   local n = T:LearnableCount()
@@ -483,6 +552,7 @@ function X:Refresh()
       local r, e = p.rows[i], list[i + off]
       if e then
         r.key = (e.kind == "head") and e.key or nil
+        r.spell = e.spell
         r.text:SetText(e.text or "")
         r.right:SetText(e.right or "")
         if e.kind == "head" then
@@ -497,6 +567,7 @@ function X:Refresh()
         r:Show()
       else
         r.key = nil
+        r.spell = nil
         r:Hide()
       end
     end
