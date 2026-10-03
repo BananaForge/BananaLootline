@@ -2,6 +2,16 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.23.0
+
+- **Neu: Seitenmenü „Extras" mit Erinnerung an Klassen- und Berufslehrer.** Am rechten Rand des Fensters sitzt eine Lasche mit Pfeil; ein Klick klappt daneben das Menü auf. Die Zahl auf der Lasche sagt, wie viel gerade lernbar ist.
+  - **Klassenlehrer:** was jetzt lernbar ist, mit Gesamtpreis, darunter die nächsten drei Stufen mit ihren Zaubern und Rängen, und wann und wo man zuletzt beim Lehrer war.
+  - **Berufslehrer:** je Beruf die aktuelle Fertigkeit, was jetzt lernbar ist, und die nächsten Rezepte mit der nötigen Fertigkeit.
+  - **Meldung beim Stufenaufstieg** im Chat und mitten auf dem Bildschirm, z. B. „Neu beim Klassenlehrer: 3 Zauber, 47s." Ebenso, wenn eine Berufsfertigkeit die Schwelle für neue Rezepte erreicht. Gemeldet wird nur, was neu dazugekommen ist.
+  - **Woher die Daten kommen:** vom Lehrer selbst. Beim Öffnen des Lehrerfensters liest das Addon die ganze Liste — auch was noch nicht lernbar ist, mit Stufe, Fertigkeit und Preis — und merkt sie sich pro Charakter. Die Angaben stammen damit von diesem Server, auch für eigene Zauber. Dafür blendet es kurz „nicht verfügbar" im Lehrerfenster ein und stellt den Filter danach zurück.
+  - Einmal muss man beim jeweiligen Lehrer gewesen sein. Bis dahin meldet das Addon auf geraden Stufen, dass es beim Klassenlehrer vermutlich Neues gibt.
+- Neuer Test `tools/test_trainer.lua` mit nachgebautem Lehrerfenster.
+
 ## 0.22.19
 
 - **„Pro Item": der Quellen-Knopf liegt nicht mehr unter der Zeile „Angelegt".** Die Ansicht beginnt 26 Pixel tiefer, der Knopf sitzt darüber und eine Ebene höher.
