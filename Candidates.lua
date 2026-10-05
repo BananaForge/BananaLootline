@@ -380,6 +380,9 @@ function Cand:StartIndex(minLvl, maxLvl)
   self.pfqCount   = 0
   self.importCount = 0
   self.state    = "indexing"
+  self.lastError = nil
+  self.startedAt = GetTime and GetTime() or 0
+  self.lastTick  = nil
   indexKey  = nil
   indexBand = { min = minLvl, max = maxLvl }
 
@@ -432,6 +435,24 @@ end
 
 local importKey = nil
 
+local function ImportReq(e)
+  local req, ilvl = e.reqlevel or 0, e.ilvl or 0
+  if req <= 0 then req = math.max(0, ilvl - ILVL_TO_REQ) end
+  return req
+end
+
+local function ImportAccepts(e, effReq, maxReq, minIlvl, class)
+  return effReq <= maxReq and (e.ilvl or 0) >= minIlvl and (e.quality or 0) >= 1
+     and BLL.ItemDB:MaskAllows(e.classmask, class)
+end
+
+-- Grenzen fuer den Import, wie ImportChunk sie nutzt.
+function Cand:ImportBounds()
+  local player = BLL.player or {}
+  local level  = player.level or 60
+  return level + self:PlanAhead(), math.max(1, level - Lookback(level)), player.class
+end
+
 function Cand:StartImportIndex()
   if not BLL.ItemDB or not BLL.ItemDB.loaded or not BLL.ItemDB.data then
     self:AnnouncePool()
@@ -450,16 +471,11 @@ function Cand:ImportChunk()
     return
   end
 
-  local player = BLL.player or {}
-  local level  = player.level or 60
-  local class  = player.class
-
   -- Obergrenze ist die Anforderungsstufe: was man nicht anlegen kann und
   -- auch nicht bald anlegen kann, gehoert nicht auf die Liste.
-  local maxReq  = level + self:PlanAhead()
   -- Untergrenze ueber das Itemlevel. Deutlich veraltete Stuecke bleiben
   -- damit draussen.
-  local minIlvl = math.max(1, level - Lookback(level))
+  local maxReq, minIlvl, class = self:ImportBounds()
 
   local pfItems = BLL.Sources.items
   local processed = 0
@@ -467,8 +483,6 @@ function Cand:ImportChunk()
 
   while key and processed < CHUNK do
     if type(e) == "table" and not self.pool[key] then
-      local req  = e.reqlevel or 0
-      local ilvl = e.ilvl or 0
 
       -- 2275 der 11349 Eintraege fuehren keine Anforderungsstufe. Ohne
       -- Ersatzwert rutscht jeder davon durch, weil 0 immer kleiner ist
@@ -476,11 +490,9 @@ function Cand:ImportChunk()
       -- (Itemlevel 65, keine Stufenangabe) im Pool eines Stufe-15-
       -- Jaegers und verdraengte mit absurden Zuwaechsen alles, was
       -- wirklich erreichbar war. Geschaetzt wird ueber das Itemlevel.
-      local effReq = req
-      if effReq <= 0 then effReq = math.max(0, ilvl - ILVL_TO_REQ) end
+      local effReq = ImportReq(e)
 
-      if effReq <= maxReq and ilvl >= minIlvl and (e.quality or 0) >= 1
-         and BLL.ItemDB:MaskAllows(e.classmask, class) then
+      if ImportAccepts(e, effReq, maxReq, minIlvl, class) then
         -- Als Poolstufe die Anforderungsstufe nehmen, ersatzweise das
         -- Itemlevel. Sie dient nur der Anzeige, gefiltert wurde schon.
         -- Als Poolstufe die geschaetzte Anforderungsstufe, nicht das rohe
@@ -821,7 +833,9 @@ end
 -- keinen Fortschritt an. Geblieben ist die Fassung, die alle vier
 -- tatsaechlichen Zustaende abdeckt.
 function Cand:Progress()
-  if self.state == "indexing" then
+  if self.state == "failed" then
+    return L["PROG_FAILED"]
+  elseif self.state == "indexing" or self.state == "indexdb" then
     return L["PROG_INDEX"]
   elseif self.state == "requesting" then
     return string.format(L["PROG_REQUEST"],
@@ -1809,6 +1823,59 @@ function Cand:Run(span)
 end
 
 ------------------------------------------------------------------
+-- Diagnose fuer /bll selftest
+--
+-- Spielt die beiden Schritte, die den Pool fuellen, einmal am Stueck
+-- und geschuetzt durch: wie viele Items pfQuest und der Import fuer das
+-- aktuelle Band liefern wuerden, und ob dabei ein Fehler auftritt.
+-- Dazu der Zustand der laufenden oder letzten Suche.
+------------------------------------------------------------------
+
+function Cand:Diagnose()
+  local d = { state = self.state or "idle", lastError = self.lastError }
+  local now = GetTime and GetTime() or 0
+  local running = d.state == "indexing" or d.state == "indexdb" or d.state == "requesting"
+               or d.state == "waiting" or d.state == "collecting"
+  if running then
+    local last = self.lastTick or self.startedAt or now
+    d.idleFor = now - last
+    d.stuck = d.idleFor > 5
+  end
+
+  local lo, hi = self:Band()
+  local band = { min = lo, max = hi }
+  local items = BLL.Sources and BLL.Sources.items
+  d.pfqTotal, d.pfqBand = 0, 0
+  if items then
+    local ok, err = pcall(function()
+      for key, entry in pairs(items) do
+        d.pfqTotal = d.pfqTotal + 1
+        if type(entry) == "table" then
+          local lvl = self:SourceLevel(key, entry, band)
+          if lvl and lvl >= lo and lvl <= hi then d.pfqBand = d.pfqBand + 1 end
+        end
+      end
+    end)
+    if not ok then d.pfqError = tostring(err) end
+  end
+
+  d.importBand = 0
+  local data = BLL.ItemDB and BLL.ItemDB.data
+  if data then
+    local ok, err = pcall(function()
+      local maxReq, minIlvl, class = self:ImportBounds()
+      for _, e in pairs(data) do
+        if type(e) == "table" and ImportAccepts(e, ImportReq(e), maxReq, minIlvl, class) then
+          d.importBand = d.importBand + 1
+        end
+      end
+    end)
+    if not ok then d.importError = tostring(err) end
+  end
+  return d
+end
+
+------------------------------------------------------------------
 -- Motor
 ------------------------------------------------------------------
 
@@ -1821,9 +1888,12 @@ if driver.RegisterEvent then
   driver:RegisterEvent("CHARACTER_POINTS_CHANGED")
   driver:SetScript("OnEvent", function() Cand.skillsDirty = true end)
 end
-driver:SetScript("OnUpdate", function()
-  local elapsed = arg1 or 0
-
+-- Ein Schritt der Suche. Laeuft geschuetzt: ein Fehler in einem Schritt
+-- liess die Suche frueher still sterben. Das Fenster zeigte dann "nichts
+-- Besseres gefunden", und weil manche Fehler-Addons das Lua-Popup
+-- schlucken, sah niemand den Grund (gemeldet von einem Tester auf Stufe
+-- 45: Pool 0, keine Fehlermeldung).
+local function Step(elapsed)
   if Cand.state == "indexing" then
     Cand:IndexChunk()
 
@@ -1842,4 +1912,30 @@ driver:SetScript("OnUpdate", function()
   elseif Cand.state == "collecting" then
     Cand:CollectTick()
   end
+end
+
+-- Fehler festhalten, Suche anhalten und laut melden.
+function Cand:Fail(step, err)
+  self.state = "failed"
+  self.lastError = { step = step, msg = tostring(err) }
+  BLL:Print("|cffff3333" .. string.format(L["CAND_ERROR"], step, tostring(err)) .. "|r")
+  BLL:Print("|cffff8800" .. L["CAND_ERROR_HINT"] .. "|r")
+  if BLL.UI and BLL.UI.frame and BLL.UI.frame:IsVisible() and BLL.UI.Refresh then
+    pcall(BLL.UI.Refresh, BLL.UI)
+  end
+end
+
+function Cand:Tick(elapsed)
+  local st = self.state
+  if st ~= "indexing" and st ~= "indexdb" and st ~= "requesting"
+     and st ~= "waiting" and st ~= "collecting" then
+    return
+  end
+  self.lastTick = GetTime and GetTime() or 0
+  local ok, err = pcall(Step, elapsed)
+  if not ok then self:Fail(st, err) end
+end
+
+driver:SetScript("OnUpdate", function()
+  Cand:Tick(arg1 or 0)
 end)
