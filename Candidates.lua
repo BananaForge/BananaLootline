@@ -391,8 +391,16 @@ function Cand:StartIndex(minLvl, maxLvl)
 end
 
 function Cand:IndexChunk()
+  -- Ohne pfQuest (etwa nur Questie installiert) gibt es hier nichts zu
+  -- durchsuchen; weiter mit dem Import. Bis 0.24.1 blieb die Suche an
+  -- dieser Stelle stehen: Pool 0, "nichts Besseres gefunden", obwohl
+  -- der Import 2227 passende Items kannte.
   local items = BLL.Sources.items
-  if not items then self.state = "idle" return end
+  if not items then
+    self.pfqCount = 0
+    self:StartImportIndex()
+    return
+  end
 
   local processed = 0
   local key, entry = next(items, indexKey)

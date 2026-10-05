@@ -681,7 +681,7 @@ end
 local dropCache = {}
 
 function Sources:GetUnitDrops(unitID)
-  if not self.available then return nil end
+  if not self.available or not self.items then return nil end
   if dropCache[unitID] then return dropCache[unitID] end
 
   local out = {}
