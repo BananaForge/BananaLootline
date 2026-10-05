@@ -1,9 +1,16 @@
 name: Release
 
-# Ausloeser: ein Tag wie v0.18.0. Die Version im Tag muss mit
-# "## Version:" in BananaLootline.toc uebereinstimmen.
+# Ausloeser:
+#  - jeder Push auf main: steht in der TOC eine Version, zu der es noch
+#    kein Tag gibt, wird Tag und Release automatisch angelegt. Frueher
+#    brauchte es dafuer ein Tag von Hand - das letzte war v0.22.4, und
+#    die Tester luden weiter GitHubs "Download ZIP" mit dem falschen
+#    Ordnernamen "BananaLootline-main".
+#  - ein Tag wie v0.18.0 von Hand. Die Version im Tag muss mit
+#    "## Version:" in BananaLootline.toc uebereinstimmen.
 on:
   push:
+    branches: [ main ]
     tags: [ 'v*' ]
 
 permissions:
@@ -14,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Lua 5.1 installieren
         run: sudo apt-get update && sudo apt-get install -y lua5.1
@@ -23,17 +32,23 @@ jobs:
 
       - name: Version pruefen
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
           TOC="$(grep '^## Version:' BananaLootline.toc | sed 's/## Version: *//' | tr -d '\r')"
-          if [ "$TAG" != "$TOC" ]; then
-            echo "Tag $TAG passt nicht zur .toc-Version $TOC"; exit 1
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME#v}"
+            if [ "$TAG" != "$TOC" ]; then
+              echo "Tag $TAG passt nicht zur .toc-Version $TOC"; exit 1
+            fi
+          elif git rev-parse -q --verify "refs/tags/v$TOC" >/dev/null; then
+            echo "v$TOC gibt es schon - kein neues Release."
+            echo "SKIP=1" >> "$GITHUB_ENV"
           fi
-          echo "VERSION=$TAG" >> "$GITHUB_ENV"
+          echo "VERSION=$TOC" >> "$GITHUB_ENV"
 
       # Der Ordner im ZIP MUSS "BananaLootline" heissen, sonst findet der
       # Client weder das Addon noch das Logo. GitHubs eigenes
       # "Download ZIP" liefert "BananaLootline-main" - deshalb dieses Paket.
       - name: Paket bauen
+        if: env.SKIP != '1'
         run: |
           mkdir -p dist/BananaLootline
           cp BananaLootline.toc *.lua README.md LICENSE CHANGELOG.md dist/BananaLootline/
@@ -41,7 +56,12 @@ jobs:
           cd dist && zip -r "BananaLootline-${VERSION}.zip" BananaLootline
 
       - name: Release anlegen
+        if: env.SKIP != '1'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: BananaLootline ${{ env.VERSION }}
           files: dist/BananaLootline-${{ env.VERSION }}.zip
           generate_release_notes: true
+          make_latest: true
