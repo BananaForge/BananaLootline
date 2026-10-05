@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.24.2
+
+- **Suche funktioniert ohne pfQuest.** Wer nur Questie (z. B. Questie-Octo) und kein pfQuest installiert hat, bekam immer „nichts Besseres gefunden": die Suche erwartete im ersten Schritt die pfQuest-Datenbank und blieb ohne sie stehen — Pool 0, ohne Fehlermeldung. Jetzt geht sie direkt zu den eingebauten Fundorten über. Gefunden dank der Suchdiagnose aus 0.24.1 (ein Tester auf Stufe 45: „pfQuest: 0 of 0", „Import: 2227 items in the search range").
+- **Ehrliche pfQuest-Anzeige.** Beim Laden und in `/bll selftest` stand „pfQuest OK", sobald die eingebauten Fundorte da waren — auch ohne pfQuest. Jetzt heißt es „pfQuest nicht installiert (optional, die eingebauten Fundorte werden genutzt)".
+- `tools/test_nopfquest.lua` spielt die ganze Suche ohne pfQuest mit den echten Daten durch (Stufe-45-Paladin).
+
 ## 0.24.1
 
 - **Die Suche stirbt nicht mehr still.** Jeder Suchschritt läuft geschützt. Tritt ein Fehler auf, hält die Suche an, schreibt den Schritt und die Fehlermeldung rot in den Chat, und das Fenster zeigt „Suche fehlgeschlagen – siehe Chat“ statt „nichts Besseres gefunden“. Anlass: ein Tester auf Stufe 45 bekam Pool 0 ohne jede Fehlermeldung — vermutlich schluckte ein Fehler-Addon das Lua-Popup.

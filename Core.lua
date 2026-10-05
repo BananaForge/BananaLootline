@@ -17,7 +17,7 @@ local L = BLL.L
 -- wird die Version in der TOC; BLL:Version() liest sie von dort.
 -- Bis 0.22.5 stand hier eine zweite, von Hand gepflegte Nummer, und
 -- sie lief auseinander: die TOC sagte 0.22.5, der Selbsttest 0.21.1.
-BLL.VERSION_FALLBACK = "0.24.1"
+BLL.VERSION_FALLBACK = "0.24.2"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -138,8 +138,10 @@ frame:SetScript("OnEvent", function()
     if BLL.migrated then
       BLL:Print(L["MIGRATED"])
     end
-    if BLL.Sources.available then
+    if BLL.Sources.items then
       BLL:Print("|cff00ff00" .. L["PFQUEST_OK"] .. "|r")
+    elseif BLL.Sources.available then
+      BLL:Print("|cff888888" .. L["PFQUEST_BUILTIN"] .. "|r")
     else
       BLL:Print("|cffff8800" .. L["NO_PFQUEST"] .. "|r")
     end
@@ -274,10 +276,21 @@ function BLL:SelfTest()
   ----------------------------------------------------------------
   -- Datenquellen
   ----------------------------------------------------------------
+  -- pfQuest ist optional: die eingebauten Fundorte reichen fuer die
+  -- Suche. Frueher stand hier "OK", sobald irgendeine Quelle da war -
+  -- auch ohne pfQuest. Das verschleierte, dass ein Tester nur Questie
+  -- hatte.
+  local hasPf = self.Sources and self.Sources.items ~= nil
   local pf = self.Sources and self.Sources.available
-  out:AddMessage("  pfQuest " .. Mark(pf)
-    .. (pf and "" or (" |cff888888" .. L["ST_PFQUEST_NOTE"] .. "|r")))
-  if not pf then warn = warn + 1 end
+  if hasPf then
+    out:AddMessage("  pfQuest " .. Mark(true))
+  elseif pf then
+    out:AddMessage("  pfQuest |cff888888" .. L["ST_PFQUEST_MISSING"] .. "|r")
+  else
+    out:AddMessage("  pfQuest " .. Mark(false)
+      .. " |cff888888" .. L["ST_PFQUEST_NOTE"] .. "|r")
+    warn = warn + 1
+  end
 
   local db = self.ItemDB and self.ItemDB.loaded
   out:AddMessage("  ItemDB " .. Mark(db) .. " "
@@ -383,8 +396,10 @@ function BLL:SelfTest()
     warn = warn + 1
     out:AddMessage("   |cffff0000" .. string.format(L["ST_DIAG_FAIL"], tostring(d)) .. "|r")
   else
-    out:AddMessage("  " .. string.format(L["ST_DIAG_PFQ"], d.pfqBand, d.pfqTotal)
-      .. " " .. Mark(d.pfqBand > 0 and not d.pfqError))
+    if hasPf then
+      out:AddMessage("  " .. string.format(L["ST_DIAG_PFQ"], d.pfqBand, d.pfqTotal)
+        .. " " .. Mark(d.pfqBand > 0 and not d.pfqError))
+    end
     if d.pfqError then
       warn = warn + 1
       out:AddMessage("   |cffff0000" .. tostring(d.pfqError) .. "|r")
