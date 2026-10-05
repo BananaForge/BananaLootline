@@ -119,7 +119,8 @@ Sources appear on every item tooltip in the game, not only inside the addon wind
 
 ## 📦 Installation
 
-1. Extract the `BananaLootline` folder into `<WoW directory>\Interface\AddOns\`.
+1. Download the latest ZIP from **[Releases](https://github.com/BananaForge/BananaLootline/releases/latest)** (the file `BananaLootline-x.y.z.zip`, not "Source code") and extract the `BananaLootline` folder into `<WoW directory>\Interface\AddOns\`. No renaming needed.
+   (GitHub's green "Code → Download ZIP" button gives a folder called `BananaLootline-main` — that one has to be renamed to `BananaLootline`, or the game will not load it.)
 2. Optional: install **pfQuest** and **pfQuest-octo**. They are not required — the addon has its own source data. They add localized NPC and zone names on a non-English client, a fallback for items the server's export does not cover, and their own map pins.
    → [pfQuest-octo by roby-brok](https://github.com/roby-brok/pfQuest-octo)
 3. Log in and type `/bll`.
