@@ -2,6 +2,17 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.24.1
+
+- **Die Suche stirbt nicht mehr still.** Jeder Suchschritt läuft geschützt. Tritt ein Fehler auf, hält die Suche an, schreibt den Schritt und die Fehlermeldung rot in den Chat, und das Fenster zeigt „Suche fehlgeschlagen – siehe Chat“ statt „nichts Besseres gefunden“. Anlass: ein Tester auf Stufe 45 bekam Pool 0 ohne jede Fehlermeldung — vermutlich schluckte ein Fehler-Addon das Lua-Popup.
+- **`/bll selftest` mit Suchdiagnose.** Neu sind die Zeilen:
+  - wie viele pfQuest-Items im Suchbereich liegen (von wie vielen insgesamt),
+  - wie viele Import-Items im Suchbereich liegen,
+  - der Suchstatus, mit Warnung, wenn eine Suche seit über 5 Sekunden keinen Fortschritt macht,
+  - der letzte Suchfehler,
+  - eine Warnung, wenn die letzte Suche nichts gesammelt hat, obwohl Items im Bereich liegen.
+- `tools/test_searchfail.lua` prüft Fehlerfang, Hängen und Diagnose.
+
 ## 0.24.0
 
 - **Seitenmenü „Statgewichte" links am Hauptfenster.** Eine Lasche mit Pfeil im linken Zwischenrand neben den Slots klappt es auf. Alle Gewichte lassen sich direkt bearbeiten, gruppiert nach Attribute, Physisch, Zauber, Verteidigung und Widerstände; das Mausrad scrollt.

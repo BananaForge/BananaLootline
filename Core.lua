@@ -17,7 +17,7 @@ local L = BLL.L
 -- wird die Version in der TOC; BLL:Version() liest sie von dort.
 -- Bis 0.22.5 stand hier eine zweite, von Hand gepflegte Nummer, und
 -- sie lief auseinander: die TOC sagte 0.22.5, der Selbsttest 0.21.1.
-BLL.VERSION_FALLBACK = "0.24.0"
+BLL.VERSION_FALLBACK = "0.24.1"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -375,6 +375,43 @@ function BLL:SelfTest()
       self.Candidates.pfqCount or 0) .. "|r")
   else
     out:AddMessage("  |cff888888" .. L["ST_NOSEARCH"] .. "|r")
+  end
+
+  -- Was die Suche fuer dieses Band finden muesste, und wie es ihr ging.
+  local okD, d = pcall(self.Candidates.Diagnose, self.Candidates)
+  if not okD then
+    warn = warn + 1
+    out:AddMessage("   |cffff0000" .. string.format(L["ST_DIAG_FAIL"], tostring(d)) .. "|r")
+  else
+    out:AddMessage("  " .. string.format(L["ST_DIAG_PFQ"], d.pfqBand, d.pfqTotal)
+      .. " " .. Mark(d.pfqBand > 0 and not d.pfqError))
+    if d.pfqError then
+      warn = warn + 1
+      out:AddMessage("   |cffff0000" .. tostring(d.pfqError) .. "|r")
+    end
+    out:AddMessage("  " .. string.format(L["ST_DIAG_IMPORT"], d.importBand)
+      .. " " .. Mark(d.importBand > 0 and not d.importError))
+    if d.importError then
+      warn = warn + 1
+      out:AddMessage("   |cffff0000" .. tostring(d.importError) .. "|r")
+    end
+    local stLine = "  " .. string.format(L["ST_DIAG_STATE"], d.state)
+    if d.stuck then
+      warn = warn + 1
+      stLine = stLine .. " |cffff0000" .. string.format(L["ST_DIAG_STUCK"], d.idleFor) .. "|r"
+    end
+    out:AddMessage(stLine)
+    if d.lastError then
+      warn = warn + 1
+      out:AddMessage("   |cffff0000" .. string.format(L["CAND_ERROR"],
+        d.lastError.step, d.lastError.msg) .. "|r")
+    end
+    if self.Candidates.pool and (self.Candidates.poolSize or 0) == 0
+       and d.state ~= "indexing" and d.state ~= "indexdb"
+       and (d.pfqBand + d.importBand) > 0 then
+      warn = warn + 1
+      out:AddMessage("   |cffff0000" .. L["ST_DIAG_EMPTY"] .. "|r")
+    end
   end
 
   ----------------------------------------------------------------
