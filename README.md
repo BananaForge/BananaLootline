@@ -127,6 +127,8 @@ Sources appear on every item tooltip in the game, not only inside the addon wind
 
 Settings from an earlier OctoLootline install are carried over automatically.
 
+**Analytics note:** once per login, and when the guild dashboard BananaGuild asks for it, the addon invisibly reports its name and version to the guild (guild addon channel, prefix `BGLD`, via `BananaPresence.lua`). Nothing is shown in chat.
+
 ---
 
 ## 🎮 Commands

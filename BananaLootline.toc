@@ -7,6 +7,8 @@
 ## SavedVariables: BananaLootlineDB, OctoLootlineDB
 ## SavedVariablesPerCharacter: BananaLootlineChar, OctoLootlineChar
 
+BananaPresence.lua
+BananaPresenceReg.lua
 Locale.lua
 Data\ItemData.lua
 Data\SourceData.lua
