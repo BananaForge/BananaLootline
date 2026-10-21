@@ -130,6 +130,46 @@ local function AllowedArmor(class, level)
   return { CLOTH = 1 }   -- Priester, Magier, Hexenmeister
 end
 
+-- Die Ruestungsart, die eine Klasse eigentlich traegt: die schwerste,
+-- die sie kann. Ein Jaeger darf Stoff tragen, will aber keine Stoffrobe
+-- vorgeschlagen bekommen - gemeldet von einem BM-Jaeger auf Stufe 38,
+-- dem die "Stormreaver Robe" (Ausdauer, Intelligenz, Zauberschaden) als
+-- Brust-Upgrade erschien. Die Ruestungspunkte sind zu schwach gewichtet,
+-- als dass der Abstand zu Leder das ausgleicht.
+local function PreferredArmor(class, level)
+  if class == "WARRIOR" or class == "PALADIN" then
+    if level >= 40 then return { PLATE = 1, SHIELD = 1 } end
+    return { MAIL = 1, SHIELD = 1 }
+  elseif class == "HUNTER" then
+    if level >= 40 then return { MAIL = 1 } end
+    return { LEATHER = 1 }
+  elseif class == "SHAMAN" then
+    if level >= 40 then return { MAIL = 1, SHIELD = 1 } end
+    return { LEATHER = 1, SHIELD = 1 }
+  elseif class == "ROGUE" or class == "DRUID" then
+    return { LEATHER = 1 }
+  end
+  return { CLOTH = 1 }
+end
+
+-- Leichtere Ruestung zeigen? Pro Charakter, Standard aus.
+function Cand:ShowLighterArmor()
+  return BananaLootlineChar and BananaLootlineChar.lighterArmor and true or false
+end
+
+function Cand:SetShowLighterArmor(on)
+  BananaLootlineChar = BananaLootlineChar or {}
+  BananaLootlineChar.lighterArmor = on and true or nil
+end
+
+-- Ruestungsarten fuer Vorschlaege: nur die eigene, ausser der Spieler
+-- will auch leichtere sehen. Fuer das Vorsortieren der Anfragen bleibt
+-- AllowedArmor zustaendig, damit das Umschalten keine neue Suche braucht.
+function Cand:SuggestArmor(class, level)
+  if self:ShowLighterArmor() then return AllowedArmor(class, level) end
+  return PreferredArmor(class, level)
+end
+
 ------------------------------------------------------------------
 -- Waffenkompetenzen
 --
@@ -1043,8 +1083,11 @@ function Cand:IsUsable(entry, class, level, allowedArmor, itemID)
   end
 
   -- Ruestungsart pruefen. Schmuck, Ringe, Halsketten und Waffen haben
-  -- keinen Ruestungsschluessel und werden durchgelassen.
-  if entry.a and not allowedArmor[entry.a] then return false end
+  -- keinen Ruestungsschluessel und werden durchgelassen. Umhaenge fuehren
+  -- "Stoff", sind aber fuer jede Klasse da.
+  if entry.a and not allowedArmor[entry.a] and entry.e ~= "INVTYPE_CLOAK" then
+    return false
+  end
 
   -- Klassenbeschraenkung aus dem Import. Ein "Arcanist Circlet" ist
   -- magierexklusiv - ohne diese Pruefung wuerde es jedem Stoffträger
@@ -1074,7 +1117,7 @@ function Cand:GetUpgrades(slotKey, maxResults, accept, maxScan)
   local player = BLL.player or {}
   local level = player.level or 60
   local class = player.class
-  local allowedArmor = AllowedArmor(class, level)
+  local allowedArmor = self:SuggestArmor(class, level)
   local isWeapon = WEAPON_SLOTS[slotKey]
 
   ----------------------------------------------------------------
@@ -1790,7 +1833,8 @@ function Cand:Explain(itemID)
     local atlas = self:AtlasRestriction(itemID)
     if atlas then add("AtlasLoot: " .. atlas) end
     add("usable: " .. tostring(self:IsUsable(c, player.class, level,
-      AllowedArmor(player.class, level), itemID)))
+      self:SuggestArmor(player.class, level), itemID))
+      .. (self:ShowLighterArmor() and "" or " (armor: own type only)"))
     local slots = self.INVTYPE_SLOTS[c.e or ""]
     if slots and BLL.Weights and BLL.Gear then
       local isWeapon = WEAPON_SLOTS[slots[1]]
