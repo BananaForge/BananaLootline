@@ -1413,6 +1413,17 @@ function UI:BuildDetailPane()
         UIDropDownMenu_AddButton(info)
       end
     end
+    -- Leichtere Ruestung: kein Fundort, gehoert aber zur Frage "was
+    -- wird mir vorgeschlagen" und gilt fuer beide Ansichten.
+    local arm = {}
+    arm.text = L["SRC_LIGHTER_ARMOR"]
+    arm.checked = C:ShowLighterArmor() and 1 or nil
+    arm.keepShownOnClick = 1
+    arm.func = function()
+      C:SetShowLighterArmor(not C:ShowLighterArmor())
+      BLL.UI:Refresh()
+    end
+    UIDropDownMenu_AddButton(arm)
   end
 
   srcBtn:SetScript("OnClick", function()

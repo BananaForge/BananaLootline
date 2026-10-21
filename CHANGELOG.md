@@ -2,6 +2,13 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.24.3
+
+- **Nur noch die eigene Rüstungsart.** Vorgeschlagen wird die schwerste Rüstungsart, die die Klasse tragen kann: Jäger Leder, ab 40 Kette; Schamane Leder, ab 40 Kette (plus Schilde); Krieger und Paladin Kette, ab 40 Platte (plus Schilde); Schurke und Druide Leder; Stoffklassen Stoff. Bisher kam alles, was die Klasse tragen *darf* — ein BM-Jäger auf Stufe 38 bekam die „Stormreaver Robe" (Stoff, Ausdauer, Intelligenz) als Brust-Upgrade, weil Rüstungspunkte zu schwach zählen, um den Abstand zu Leder auszugleichen.
+  - Umhänge (im Spiel als Stoff geführt) sind davon ausgenommen.
+  - Im Quellen-Menü schaltet „+ Leichtere Rüstung" die alte Auswahl wieder ein, pro Charakter gespeichert.
+- `tools/test_armorpref.lua` prüft Jäger vor und ab 40, Umhänge, den Schalter und eine Stoffklasse.
+
 ## 0.24.2
 
 - **Suche funktioniert ohne pfQuest.** Wer nur Questie (z. B. Questie-Octo) und kein pfQuest installiert hat, bekam immer „nichts Besseres gefunden": die Suche erwartete im ersten Schritt die pfQuest-Datenbank und blieb ohne sie stehen — Pool 0, ohne Fehlermeldung. Jetzt geht sie direkt zu den eingebauten Fundorten über. Gefunden dank der Suchdiagnose aus 0.24.1 (ein Tester auf Stufe 45: „pfQuest: 0 of 0", „Import: 2227 items in the search range").
