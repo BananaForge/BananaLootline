@@ -6,12 +6,17 @@ name: Release
 #    brauchte es dafuer ein Tag von Hand - das letzte war v0.22.4, und
 #    die Tester luden weiter GitHubs "Download ZIP" mit dem falschen
 #    Ordnernamen "BananaLootline-main".
-#  - ein Tag wie v0.18.0 von Hand. Die Version im Tag muss mit
+#  - ein Tag wie 0.18.0 von Hand. Die Version im Tag muss mit
 #    "## Version:" in BananaLootline.toc uebereinstimmen.
+#
+# Tag und Releasename sind die nackte Versionsnummer, genau wie in der
+# TOC. Bis 0.24.3 hiessen sie "v0.24.3" bzw. "BananaLootline 0.24.3";
+# ein Addon-Manager, der den Text mit der TOC-Version vergleicht, fand
+# nie Gleichheit und meldete bei jeder Pruefung ein Update.
 on:
   push:
     branches: [ main ]
-    tags: [ 'v*' ]
+    tags: [ 'v*', '[0-9]*' ]
 
 permissions:
   contents: write
@@ -38,8 +43,8 @@ jobs:
             if [ "$TAG" != "$TOC" ]; then
               echo "Tag $TAG passt nicht zur .toc-Version $TOC"; exit 1
             fi
-          elif git rev-parse -q --verify "refs/tags/v$TOC" >/dev/null; then
-            echo "v$TOC gibt es schon - kein neues Release."
+          elif git rev-parse -q --verify "refs/tags/$TOC" >/dev/null; then
+            echo "$TOC gibt es schon - kein neues Release."
             echo "SKIP=1" >> "$GITHUB_ENV"
           fi
           echo "VERSION=$TOC" >> "$GITHUB_ENV"
@@ -59,9 +64,9 @@ jobs:
         if: env.SKIP != '1'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ env.VERSION }}
+          tag_name: ${{ env.VERSION }}
           target_commitish: ${{ github.sha }}
-          name: BananaLootline ${{ env.VERSION }}
+          name: ${{ env.VERSION }}
           files: dist/BananaLootline-${{ env.VERSION }}.zip
           generate_release_notes: true
           make_latest: true
