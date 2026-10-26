@@ -2,6 +2,13 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.24.4
+
+- **Tierausbilder ist kein Klassenlehrer mehr.** Tierausbilder und Waffenmeister öffnen dasselbe Lehrerfenster wie der Klassenlehrer. Ein Jäger sah deshalb im Extras-Menü unter „Klassenlehrer" Knurren, Große Ausdauer und Widerstände. Jetzt prüft das Addon den Titel des NPCs („<Hunter Trainer>" / „<Jägerlehrer>") und merkt sich nur den Lehrer der eigenen Klasse.
+  - Eine schon gespeicherte Tierausbilder-Liste wird beim Einloggen entfernt; beim nächsten Besuch des Klassenlehrers ist die richtige Liste da.
+  - Ein Beruf, dessen Name sich nicht lesen ließ, stand bisher als „?" im Menü. Er heißt jetzt wie der Lehrertitel oder wird gar nicht gespeichert; der alte „?"-Eintrag wird entfernt.
+- `tools/test_pettrainer.lua` prüft Jäger-, Tier- und Waffenlehrer, deutsche Titel und das Aufräumen.
+
 ## 0.24.3
 
 - **Nur noch die eigene Rüstungsart.** Vorgeschlagen wird die schwerste Rüstungsart, die die Klasse tragen kann: Jäger Leder, ab 40 Kette; Schamane Leder, ab 40 Kette (plus Schilde); Krieger und Paladin Kette, ab 40 Platte (plus Schilde); Schurke und Druide Leder; Stoffklassen Stoff. Bisher kam alles, was die Klasse tragen *darf* — ein BM-Jäger auf Stufe 38 bekam die „Stormreaver Robe" (Stoff, Ausdauer, Intelligenz) als Brust-Upgrade, weil Rüstungspunkte zu schwach zählen, um den Abstand zu Leder auszugleichen.
