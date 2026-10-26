@@ -89,6 +89,84 @@ function T:Describe(i)
 end
 
 ------------------------------------------------------------------
+-- Welcher Lehrer ist das?
+--
+-- Tierausbilder und Waffenmeister oeffnen dasselbe Lehrerfenster wie der
+-- Klassenlehrer, und IsTradeskillTrainer() ist bei ihnen falsch. Bis
+-- 0.24.3 landete deshalb die Liste des Tierausbilders (Knurren, Grosse
+-- Ausdauer, Widerstaende) als "Klassenlehrer" im Extras-Menue eines
+-- Jaegers. Unterscheiden laesst sich das am Titel des NPCs, etwa
+-- "<Hunter Trainer>" gegen "<Pet Trainer>".
+------------------------------------------------------------------
+
+-- Titel des offenen Lehrers ohne spitze Klammern, oder nil.
+function T:TrainerTitle()
+  local tip = ScanTip()
+  if not (tip and tip.SetUnit and tip.NumLines) then return nil end
+  if UnitExists and not UnitExists("npc") then return nil end
+  tip:SetOwner(WorldFrame or UIParent, "ANCHOR_NONE")
+  tip:ClearLines()
+  if not pcall(tip.SetUnit, tip, "npc") then return nil end
+  local title
+  local n = tip:NumLines() or 0
+  if n > 3 then n = 3 end
+  for k = 2, n do
+    local fs = getglobal("BananaLootlineTrainerScanTextLeft" .. k)
+    local t = fs and fs:GetText()
+    local _, _, inner = string.find(t or "", "^<(.+)>$")
+    if inner then title = inner break end
+  end
+  tip:Hide()
+  return title
+end
+
+-- Wortstaemme der Klassen im Lehrertitel, englisch und deutsch. Auch
+-- weibliche Formen ("Jaegerlehrerin") enthalten den Stamm.
+T.CLASS_STEMS = {
+  WARRIOR = { "warrior", "krieger" },   PALADIN = { "paladin" },
+  HUNTER  = { "hunter", "j\195\164ger" }, ROGUE = { "rogue", "schurke" },
+  PRIEST  = { "priest", "priester" },   SHAMAN  = { "shaman", "schamane" },
+  MAGE    = { "mage", "magier" },       WARLOCK = { "warlock", "hexenmeister" },
+  DRUID   = { "druid", "druide" },
+}
+
+-- Ist der Titel der eines Lehrers der eigenen Klasse? Ohne lesbaren
+-- Titel wie bisher ja.
+function T:IsOwnClassTrainer(title)
+  if not title then return true end
+  local class = BLL.player and BLL.player.class
+  local stems = class and self.CLASS_STEMS[class]
+  if not stems then return true end
+  local low = string.lower(title)
+  for _, stem in ipairs(stems) do
+    if string.find(low, stem, 1, true) then return true end
+  end
+  return false
+end
+
+-- Aufraeumen, was frueher faelschlich gespeichert wurde: eine Liste des
+-- Tierausbilders als Klassenlehrer und ein Beruf namens "?".
+T.PET_SPELLS = {
+  ["Growl"] = true, ["Great Stamina"] = true, ["Natural Armor"] = true,
+  ["Knurren"] = true, ["Gro\195\159e Ausdauer"] = true, ["Nat\195\188rliche R\195\188stung"] = true,
+}
+
+function T:Sanitize()
+  local store = Store()
+  local c = store.class
+  if c and c.list then
+    for _, e in ipairs(c.list) do
+      if e.n and self.PET_SPELLS[e.n] then
+        store.class = nil
+        store.seenClass = nil
+        break
+      end
+    end
+  end
+  if store.prof["?"] then store.prof["?"] = nil end
+end
+
+------------------------------------------------------------------
 -- Lehrerfenster lesen
 ------------------------------------------------------------------
 
@@ -104,6 +182,15 @@ function T:Scan()
   if ExpandTrainerSkillLine then pcall(ExpandTrainerSkillLine, 0) end
 
   local isProf = IsTradeskillTrainer and IsTradeskillTrainer()
+  local title = self:TrainerTitle()
+  -- Tierausbilder, Waffenmeister und Lehrer anderer Klassen: nichts
+  -- merken.
+  if not isProf and not self:IsOwnClassTrainer(title) then
+    if SetTrainerServiceTypeFilter and not oldFilter then
+      SetTrainerServiceTypeFilter("unavailable", 0)
+    end
+    return
+  end
   local entries, skillLine = {}, nil
   for i = 1, GetNumTrainerServices() do
     local name, sub, category = GetTrainerServiceInfo(i)
@@ -131,7 +218,14 @@ function T:Scan()
   local store = Store()
   local where = GetZoneText and GetZoneText() or nil
   if isProf then
-    skillLine = skillLine or (GetTrainerServiceSkillLine and GetTrainerServiceSkillLine(1)) or "?"
+    skillLine = skillLine or (GetTrainerServiceSkillLine and GetTrainerServiceSkillLine(1)) or title
+    if not skillLine then
+      -- Ohne Namen laesst sich der Beruf nicht zuordnen; frueher stand
+      -- er dann als "?" im Menue.
+      self:Remember()
+      if BLL.Extras then BLL.Extras:Refresh() end
+      return
+    end
     store.prof[skillLine] = { list = entries, level = PlayerLevel(), zone = where, t = time and time() }
   else
     store.class = { list = entries, level = PlayerLevel(), zone = where, t = time and time() }
@@ -296,6 +390,7 @@ X.MAX_LEVELS = 5
 function X:Init()
   local main = BananaLootlineFrame
   if self.panel or not main then return end
+  pcall(T.Sanitize, T)
   local L = BLL.L
 
   -- Die Lasche sitzt genau im Zwischenrand zwischen rechter Liste und
