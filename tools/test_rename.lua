@@ -41,7 +41,7 @@ for _, f in ipairs(frames) do
 end
 check(BananaLootlineDB and BananaLootlineDB.zoneCategory.deadmines == "DUNGEON", "Einstellungen uebernommen")
 check(BananaLootlineDB.aheadLevels == 4, "eigener Wert bleibt")
-check(BananaLootlineDB.tooltipSources == true, "Standardwerte ergaenzt")
+check(BananaLootlineDB.maxSources == 5 and BananaLootlineDB.tooltipSources == false, "Standardwerte ergaenzt")
 check(BananaLootlineChar.gear.x == 1, "Charakterdaten uebernommen")
 check(OctoLootlineDB == nil and OctoLootlineChar == nil, "alte Variablen geleert")
 check(BananaLootline.migrated == true, "Hinweis vorgemerkt")

@@ -184,6 +184,12 @@ check(P:PhaseOpen(1) == (today ~= nil and today >= 20261001),
 
 BLL.player = { level = 57, class = "PALADIN", race = "Human", faction = "Alliance" }
 
+-- Der Bericht stammt von vor der Freigabe von Blackwing Lair (5.11.2026).
+-- Seitdem ist BWL offen und liefert zu Recht Quellen; der Fall wird
+-- deshalb mit dem Datum von damals nachgestellt.
+local todayDate = date
+date = function(fmt) if fmt == "%Y%m%d" then return "20261020" end return todayDate(fmt) end
+
 local REPORTED = { 3456, 5148, 3457, 5557, 3428, 5147, 5097, 3429, 2677 }
 for i = 1, table.getn(REPORTED) do
   local z = REPORTED[i]
