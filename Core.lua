@@ -17,7 +17,7 @@ local L = BLL.L
 -- wird die Version in der TOC; BLL:Version() liest sie von dort.
 -- Bis 0.22.5 stand hier eine zweite, von Hand gepflegte Nummer, und
 -- sie lief auseinander: die TOC sagte 0.22.5, der Selbsttest 0.21.1.
-BLL.VERSION_FALLBACK = "0.24.4"
+BLL.VERSION_FALLBACK = "0.24.5"
 
 ------------------------------------------------------------------
 -- Ausgabe
@@ -39,7 +39,7 @@ end
 
 local defaults = {
   debug          = false,
-  tooltipSources = true,   -- Quellen an jeden Item-Tooltip anhaengen
+  tooltipSources = false,  -- Quellen an jeden Item-Tooltip anhaengen (/bll tooltip)
   maxSources     = 5,      -- wie viele Quellen maximal im Tooltip
   minDropChance  = 0,      -- Quellen unter dieser Chance ausblenden
   language       = "auto", -- Anzeigesprache: auto, deDE, enUS
@@ -76,6 +76,15 @@ local function ApplyDefaults()
     if BananaLootlineDB[k] == nil then
       BananaLootlineDB[k] = v
     end
+  end
+  -- Bis 0.24.4 hing an jedem Item-Tooltip ein Block mit Fundorten. In
+  -- Taschen-Addons, die den Tooltip laufend neu setzen, blitzte er nur
+  -- kurz auf und verschwand wieder. Jetzt standardmaessig aus; die alte
+  -- gespeicherte Einstellung wird einmal zurueckgesetzt, wer ihn will,
+  -- schaltet ihn mit /bll tooltip wieder ein.
+  if not BananaLootlineDB.tooltipSourcesReset then
+    BananaLootlineDB.tooltipSources = false
+    BananaLootlineDB.tooltipSourcesReset = true
   end
   BananaLootlineChar = BananaLootlineChar or { gear = {}, wishlist = {} }
   BLL:SetLanguage(BananaLootlineDB.language)
@@ -480,6 +489,16 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
     else
       BLL.Scanner:DumpLines(id)
     end
+
+  elseif command == "tooltip" then
+    if param == "on" then
+      BananaLootlineDB.tooltipSources = true
+    elseif param == "off" then
+      BananaLootlineDB.tooltipSources = false
+    else
+      BananaLootlineDB.tooltipSources = not BananaLootlineDB.tooltipSources
+    end
+    BLL:Print(BananaLootlineDB.tooltipSources and L["TOOLTIP_ON"] or L["TOOLTIP_OFF"])
 
   elseif command == "tip" then
     local id = tonumber(param)
@@ -913,6 +932,7 @@ SlashCmdList["BANANALOOTLINE"] = function(msg)
       { "/bll scan",            "HELP_SCAN"       },
       { "/bll dump <id>",       "HELP_DUMP"       },
       { "/bll tip <id>",        "HELP_TIP"        },
+      { "/bll tooltip",         "HELP_TOOLTIP"    },
       { "/bll item <id>",       "HELP_ITEM"       },
       { "/bll hooks",           "HELP_HOOKS"      },
       { "/bll selftest",        "HELP_SELFTEST"   },

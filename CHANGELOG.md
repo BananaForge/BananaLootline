@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen an BananaLootline. Neueste Version oben.
 
+## 0.24.5
+
+- **Keine Fundorte mehr im Item-Tooltip.** Beim Überfahren eines Items (z. B. in der Tasche) hing unten ein Block „BananaLootline" mit Fundorten und Dropchancen. In Taschen-Addons, die den Tooltip laufend neu setzen, blitzte er nur kurz auf und verschwand wieder. Er ist jetzt standardmäßig aus; eine alte gespeicherte Einstellung wird einmal zurückgesetzt. Wer ihn haben möchte: `/bll tooltip` schaltet ihn ein und aus.
+- Test zu den Raid-Phasen angepasst: Blackwing Lair ist seit dem 5.11.2026 offen; der damals gemeldete Fall wird mit dem Datum von damals nachgestellt.
+- `tools/test_tooltipoff.lua` prüft Standard, einmalige Rücksetzung und Befehl.
+
 ## 0.24.4
 
 - **Tierausbilder ist kein Klassenlehrer mehr.** Tierausbilder und Waffenmeister öffnen dasselbe Lehrerfenster wie der Klassenlehrer. Ein Jäger sah deshalb im Extras-Menü unter „Klassenlehrer" Knurren, Große Ausdauer und Widerstände. Jetzt prüft das Addon den Titel des NPCs („<Hunter Trainer>" / „<Jägerlehrer>") und merkt sich nur den Lehrer der eigenen Klasse.
